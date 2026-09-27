@@ -17,7 +17,8 @@ All notable changes to this project are documented here. The format follows
   ECS Fargate on ARM64, deployment circuit breaker and alarm rollback, CPU and request autoscaling, alarms,
   dashboard, and optional CodeDeploy blue/green.
 - Mocked `terraform test` suites for both stacks.
-- CI (`make verify` jobs), deploy workflow (build once, scan, push by digest, deploy), OpenSSF Scorecard.
+- CI (a `make verify` job next to the shared checks), deploy workflow (build once, scan, push by digest, deploy),
+  OpenSSF Scorecard.
 - Seven ADRs, runbook, live-test guide, diagrams and a 1280x640 social preview.
 
 ### Security

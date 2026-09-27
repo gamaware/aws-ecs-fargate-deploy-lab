@@ -1,4 +1,5 @@
 data "aws_availability_zones" "available" {
+  #checkov:skip=CKV_AWS_394:Only the first var.az_count zones, in sorted name order, are used; a new zone does not change them.
   state = "available"
 }
 
