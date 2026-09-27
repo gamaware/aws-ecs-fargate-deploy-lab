@@ -1,6 +1,8 @@
 # 0003. Private tasks with VPC endpoints instead of a NAT gateway
 
-Status: Accepted
+## Status
+
+Accepted
 
 ## Context
 
@@ -12,12 +14,6 @@ which also gives the tasks a path to anywhere on the internet. This API calls no
 Tasks run in private subnets with no default route. They reach AWS through interface endpoints for `ecr.api`,
 `ecr.dkr` and `logs`, and the S3 gateway endpoint for image layers. The task security group allows egress only to
 the endpoint security group and the S3 prefix list on 443. Tasks get no public IP address.
-
-## Alternatives
-
-- One NAT gateway: about the same monthly cost as three interface endpoints in two Availability Zones, but it opens
-  outbound internet access and is a single-zone dependency unless doubled.
-- Public subnets with public IPs: cheapest, but every task is directly addressable and egress is open.
 
 ## Consequences
 
@@ -32,3 +28,11 @@ the endpoint security group and the S3 prefix list on 443. Tasks get no public I
 The task security group has no `0.0.0.0/0` egress rule, and the private route table has no routes (see
 `network.tf`). The Terraform test `tasks_are_private_and_locked_down` asserts `assign_public_ip = false`. VPC flow logs
 record every attempt.
+
+## Notes
+
+Alternatives considered:
+
+- One NAT gateway: about the same monthly cost as three interface endpoints in two Availability Zones, but it opens
+  outbound internet access and is a single-zone dependency unless doubled.
+- Public subnets with public IPs: cheapest, but every task is directly addressable and egress is open.

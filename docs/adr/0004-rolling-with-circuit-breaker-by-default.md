@@ -1,6 +1,8 @@
 # 0004. Rolling deployments with the circuit breaker and alarms by default
 
-Status: Accepted
+## Status
+
+Accepted
 
 ## Context
 
@@ -18,11 +20,6 @@ The default `deployment_strategy = "rolling"` uses the ECS deployment controller
 
 The target group checks `/ready`, not `/health`. On SIGTERM the app answers 503 on `/ready` while it drains.
 
-## Alternatives
-
-- Rolling updates without the circuit breaker: a crash-looping release keeps retrying until someone intervenes.
-- Blue/green for every deploy: see ADR 0005. It needs a second target group and listener and more moving parts.
-
 ## Consequences
 
 - `scripts/verify-deployment.sh` checks that the primary deployment reached `COMPLETED` on the expected task
@@ -34,3 +31,10 @@ The target group checks `/ready`, not `/health`. On SIGTERM the app answers 503 
 
 The Terraform test `circuit_breaker_and_alarms_roll_back_a_bad_release` asserts the circuit breaker, the alarm
 rollback and the 100 percent floor.
+
+## Notes
+
+Alternatives considered:
+
+- Rolling updates without the circuit breaker: a crash-looping release keeps retrying until someone intervenes.
+- Blue/green for every deploy: see ADR 0005. It needs a second target group and listener and more moving parts.

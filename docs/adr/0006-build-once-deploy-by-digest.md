@@ -1,6 +1,8 @@
 # 0006. Build once, scan, push by digest, deploy that digest
 
-Status: Accepted
+## Status
+
+Accepted
 
 ## Context
 
@@ -15,11 +17,6 @@ refuses it if the image ID differs, pushes it and records the `sha256` digest EC
 attestation. The deploy job passes `repo@sha256:<digest>` to Terraform. The `image` variable rejects anything that is
 not an ECR reference by digest. The repository has immutable tags.
 
-## Alternatives
-
-- Deploy by tag: readable, but the task definition does not prove which bytes ran.
-- Build again in the push job: faster to write, but the pushed image was never scanned.
-
 ## Consequences
 
 - Every task definition revision names exactly one image; rolling back means redeploying an earlier digest.
@@ -31,3 +28,10 @@ not an ECR reference by digest. The repository has immutable tags.
 
 The Terraform tests `rejects_an_image_referenced_by_tag` and `rejects_an_image_outside_ecr`, the image ID check in
 `.github/workflows/deploy.yml`, and `scripts/deploy.sh`, which refuses a reference without a digest.
+
+## Notes
+
+Alternatives considered:
+
+- Deploy by tag: readable, but the task definition does not prove which bytes ran.
+- Build again in the push job: faster to write, but the pushed image was never scanned.

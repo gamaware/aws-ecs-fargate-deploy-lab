@@ -1,6 +1,8 @@
 # 0005. Blue/green through CodeDeploy as an option
 
-Status: Accepted
+## Status
+
+Accepted
 
 ## Context
 
@@ -16,14 +18,6 @@ back on failure and when the same two alarms from ADR 0004 fire, and keeps the o
 shift. `scripts/deploy.sh` registers the task definition with Terraform, then starts the CodeDeploy deployment with an
 AppSpec that names it.
 
-## Alternatives
-
-- ECS built-in blue/green deployments (deployment controller `ECS` with a blue/green strategy, lifecycle hooks and
-  an alternate target group). They avoid a second service to operate and are the better default for a
-  new service. CodeDeploy stays here because many existing services already use it, and moving them is a common
-  request.
-- Rolling only: simpler, no test window.
-
 ## Consequences
 
 - Under CodeDeploy, Terraform ignores the service's task definition and load balancer after creation, because
@@ -37,3 +31,13 @@ AppSpec that names it.
 
 The Terraform test file `codedeploy.tftest.hcl` asserts the controller, both target groups, the test listener, the
 rollback events and the alarm configuration.
+
+## Notes
+
+Alternatives considered:
+
+- ECS built-in blue/green deployments (deployment controller `ECS` with a blue/green strategy, lifecycle hooks and
+  an alternate target group). They avoid a second service to operate and are the better default for a
+  new service. CodeDeploy stays here because many existing services already use it, and moving them is a common
+  request.
+- Rolling only: simpler, no test window.

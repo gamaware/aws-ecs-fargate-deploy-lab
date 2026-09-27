@@ -1,6 +1,8 @@
 # 0002. Separate Terraform stacks for the registry and the service
 
-Status: Accepted
+## Status
+
+Accepted
 
 ## Context
 
@@ -16,14 +18,6 @@ load balancer, WAF, cluster, service, scaling, alarms and the optional CodeDeplo
 file (`registry.tfstate`, `service.tfstate`). The order is registry once, then build and push, then service on each
 deploy.
 
-## Alternatives
-
-- One stack with `-target` on the first apply: works, but the first-run procedure lives outside the code.
-- A placeholder public image on the first apply: the task definition would briefly run an image the pipeline did not
-  build or scan.
-- A separate network stack as well: sensible when two or more services share a VPC. With one service it adds a remote
-  state lookup and little else.
-
 ## Consequences
 
 - The pipeline deploys by running `terraform apply` on the service stack only, with a small blast radius.
@@ -35,3 +29,13 @@ deploy.
 
 `make tf-verify` validates and tests both stacks independently. `terraform test` in the registry stack asserts
 immutable tags, scan on push, KMS encryption and a lifecycle policy that always keeps rollback targets.
+
+## Notes
+
+Alternatives considered:
+
+- One stack with `-target` on the first apply: works, but the first-run procedure lives outside the code.
+- A placeholder public image on the first apply: the task definition would briefly run an image the pipeline did not
+  build or scan.
+- A separate network stack as well: sensible when two or more services share a VPC. With one service it adds a remote
+  state lookup and little else.
