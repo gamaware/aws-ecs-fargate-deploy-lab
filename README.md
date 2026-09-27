@@ -1,25 +1,27 @@
-# aws-ecs-fargate-deploy-lab
+# Containerize and deploy to Amazon ECS on Fargate
 
 A small API packaged as a hardened container image and deployed to Amazon ECS on Fargate, defined in Terraform and
 checked offline.
 
-[![ci](https://github.com/gamaware/aws-ecs-fargate-deploy-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/gamaware/aws-ecs-fargate-deploy-lab/actions/workflows/ci.yml)
+[![CI](https://github.com/gamaware/aws-ecs-fargate-deploy-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/gamaware/aws-ecs-fargate-deploy-lab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Lab](https://img.shields.io/badge/type-lab-lightgrey.svg)
-![Fictional client](https://img.shields.io/badge/client-fictional%20sample-lightgrey.svg)
+![Lab](https://img.shields.io/badge/type-lab-5b6b7f)
 
-<img src="docs/assets/cover.png" alt="Containerize and deploy to Amazon ECS: Dockerfile, ECR, Fargate, CI/CD" width="720">
+![Containerize and deploy to ECS Fargate](docs/assets/cover.png)
+
+> **Lab.** Harbor Goods and all data here are fictional. Each repository in this portfolio is a
+> separate engagement with Harbor Goods, a fictional mid-size retailer. Account IDs are AWS documentation examples.
 
 ## What this proves
 
 - **Containerizing an app:** a TypeScript API moves to a multi-stage build on a distroless, non-root image. The image
-  holds no shell and no compiler, has zero fixable HIGH or CRITICAL CVEs, and a smoke test runs it under the same
-  constraints as the ECS task.
+  holds no shell and no compiler, a Trivy gate blocks any fixable HIGH or CRITICAL CVE, and a smoke test runs it
+  under the same constraints as the ECS task.
 - **The ECS platform as code:** VPC, HTTPS load balancer with AWS WAF, Fargate service on ARM64 in private subnets
   with no internet egress, CPU and request autoscaling, CloudWatch logs, alarms and a dashboard, all in Terraform.
 - **Safe releases:** the deployment circuit breaker and CloudWatch alarms roll back a bad release on their own, and
   one variable switches to blue/green through AWS CodeDeploy.
-- **An artifact you can trace:** the image is built once, scanned, pushed and deployed by `sha256` digest. Terraform
+- **A traceable artifact:** the image is built once, scanned, pushed and deployed by `sha256` digest. Terraform
   rejects any image reference by tag.
 - **Tested without an AWS account:** 17 app tests, 15 mocked `terraform test` runs, Checkov, Trivy and hadolint, all
   behind one `make verify`.
@@ -76,7 +78,8 @@ Prerequisites (versions used to verify this repo):
 | Docker | 29 (ARM64 host or emulation) |
 | Terraform | 1.14.5 |
 | tflint | 0.61.0 (AWS ruleset 0.49.0, fetched by `tflint --init`) |
-| Checkov | 3.2 or later |
+| Checkov | 3.3.19 (run through `uvx`) |
+| uv | 0.12 or later |
 | Trivy | 0.74.0 |
 | hadolint | 2.15.1 |
 
@@ -85,8 +88,14 @@ make verify
 ```
 
 The run needs no AWS credentials and makes no AWS API calls. The first run downloads npm packages, Terraform
-providers, the tflint ruleset, the base images and the Trivy database. After that it takes about a minute. The last
-line reads `make verify: all checks passed`. `make help` lists the individual targets.
+providers, the tflint ruleset, the base images and the Trivy database. After that it takes about a minute. The run ends
+with:
+
+```text
+verify: all checks passed
+```
+
+`make help` lists the individual targets.
 
 A real deployment test is available as `make test-live`. It is manual, runs against the maintainer's `dev` profile, tags
 everything and tears it all down. See [docs/live-test.md](docs/live-test.md).
@@ -105,11 +114,13 @@ docs/
   diagrams/             .drawio sources with SVG and PNG exports
   runbook.md            operating guide
   live-test.md          manual end-to-end test
-.github/workflows/      ci.yml (shared checks + app job), deploy.yml, scorecard.yml
+.github/workflows/      ci.yml (shared checks + verify job), deploy.yml, scorecard.yml
 Makefile                one entry point for local and CI runs
 ```
 
 ## Decisions and trade-offs
+
+Architecture decision records follow the *Fundamentals of Software Architecture* (2nd ed.) format.
 
 | Number | Title | Status |
 | --- | --- | --- |
@@ -125,8 +136,8 @@ Makefile                one entry point for local and CI runs
 
 | Gate | Runs in | Why |
 | --- | --- | --- |
-| App unit tests and shutdown test | `make app-test`, CI `app` job, Docker build stage | The API contract and the SIGTERM drain ECS relies on |
-| Smoke test | `make smoke`, CI `app` job (ARM64 runner) | The built image works under the task's restrictions |
+| App unit tests and shutdown test | `make app-test`, CI `verify` job, Docker build stage | The API contract and the SIGTERM drain ECS relies on |
+| Smoke test | `make smoke`, CI `verify` job (ARM64 runner) | The built image works under the task's restrictions |
 | hadolint | `make hadolint`, pre-commit, shared `container` workflow | Dockerfile practices |
 | Terraform fmt, validate, tflint, `terraform test` | `make tf-verify`, shared `terraform` workflow | Syntax, AWS-specific lint, and the guarantees in the acceptance table |
 | Checkov | `make checkov`, shared `security` workflow | Policy checks on Terraform, the Dockerfile and workflows; skips carry reasons in the code |
@@ -156,7 +167,8 @@ set timeouts. Pull request jobs get no cloud access.
 ## Related work
 
 Part of the [AWS DevOps portfolio](https://github.com/gamaware/aws-devops-portfolio), under the service
-"Containerize and deploy to ECS Fargate". The pipeline side, keyless deploy roles and security gates, is covered in
+[Containerize and deploy to ECS Fargate on Upwork](https://www.upwork.com/freelancers/~014b3520cf9e140103). The
+pipeline side, keyless deploy roles and security gates, is covered in
 [github-actions-aws-oidc-lab](https://github.com/gamaware/github-actions-aws-oidc-lab).
 
 ## License

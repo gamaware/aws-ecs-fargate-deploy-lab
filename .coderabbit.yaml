@@ -14,7 +14,7 @@ reviews:
     - path: "infra/terraform/**/*.tf"
       instructions: >-
         Check least privilege, no public IPs on tasks, no 0.0.0.0/0 egress from tasks, and that every Checkov or
-        Trivy skip carries a reason next to the resource. New behaviour needs a terraform test assertion.
+        Trivy skip carries a reason next to the resource. New behavior needs a terraform test assertion.
     - path: "infra/terraform/**/tests/*.tftest.hcl"
       instructions: >-
         Tests must use mock_provider only and must not reach AWS.

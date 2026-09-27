@@ -23,7 +23,7 @@ Fictional client "Harbor Goods". Offline verification only; never run anything a
 - Conventional commits on a feature branch; never commit to `main`. No AI attribution anywhere.
 - Images are referenced by digest only. Base images in the Dockerfile stay digest-pinned.
 - Every Checkov or Trivy skip sits next to the resource with its reason. No blanket skips.
-- New Terraform behaviour gets an assertion in `tests/*.tftest.hcl` (mocked provider only).
+- New Terraform behavior gets an assertion in `tests/*.tftest.hcl` (mocked provider only).
 - Only AWS documentation example account IDs (`111122223333`) and `example.com`; no real IDs, ARNs, IPs or emails.
 - Regenerate `README.md` Terraform tables with terraform-docs (pre-commit does it); do not edit between the markers.
 - Diagrams: edit the `.drawio` source, then export SVG and PNG.
