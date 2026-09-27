@@ -1,0 +1,12 @@
+# Example values only. Account 111122223333 is the AWS documentation example.
+name                = "harbor-stock-api"
+region              = "us-east-1"
+certificate_arn     = "arn:aws:acm:us-east-1:111122223333:certificate/1f2e3d4c-5b6a-4789-8abc-def012345678"
+image               = "111122223333.dkr.ecr.us-east-1.amazonaws.com/harbor-stock-api@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+app_version         = "0000000"
+deployment_strategy = "rolling"
+min_capacity        = 2
+max_capacity        = 6
+tags = {
+  owner = "platform-team"
+}

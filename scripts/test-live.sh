@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# Manual end-to-end test against a real AWS account (make test-live).
+# Never runs in CI. Uses the maintainer's "dev" profile only, tags every
+# resource purpose=portfolio-test, destroys everything on exit (success,
+# failure or Ctrl-C) and then checks that nothing tagged is left.
+#
+# Cost: under USD 0.25 for a 20-minute run (ALB, 2 Fargate tasks, 3 interface
+# endpoints x 2 AZs, WAF, all billed hourly; KMS keys pending deletion are free).
+#
+# Env: LIVE_STRATEGY=rolling|codedeploy (default rolling)
+#      LIVE_REGION (default us-east-1)
+#      LIVE_YES=1 skips the confirmation prompt
+# Output goes to a temporary directory outside the repository.
+set -euo pipefail
+
+PROFILE="dev"
+REGION="${LIVE_REGION:-us-east-1}"
+STRATEGY="${LIVE_STRATEGY:-rolling}"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+RUN_ID="$(date +%s | tail -c 7)"
+NAME="harbor-test-$RUN_ID"
+WORK="$(mktemp -d)"
+TAG_KEY="purpose"
+TAG_VALUE="portfolio-test"
+
+aws_cli() {
+  aws --profile "$PROFILE" --region "$REGION" "$@"
+}
+
+echo "Account for this run (profile $PROFILE):"
+aws sts get-caller-identity --profile "$PROFILE" --output table
+if [ "${LIVE_YES:-0}" != "1" ]; then
+  read -r -p "Create and destroy $NAME ($STRATEGY) in $REGION on this account? [y/N] " answer
+  [ "$answer" = "y" ] || exit 1
+fi
+
+# Terraform reads the profile from the environment; scoped to this script.
+export AWS_PROFILE="$PROFILE"
+export AWS_REGION="$REGION"
+export TF_IN_AUTOMATION=1
+
+cp -R "$REPO_ROOT/infra/terraform" "$WORK/terraform"
+rm -rf "$WORK"/terraform/*/.terraform "$WORK"/terraform/*/terraform.tfstate*
+REGISTRY="$WORK/terraform/registry"
+SERVICE="$WORK/terraform/service"
+TAGS="{\"$TAG_KEY\"=\"$TAG_VALUE\",\"run\"=\"$RUN_ID\"}"
+CERT_ARN=""
+
+teardown() {
+  set +e
+  echo "--- teardown"
+  if [ -f "$SERVICE/terraform.tfstate" ]; then
+    terraform -chdir="$SERVICE" destroy -input=false -auto-approve -var-file="$WORK/service.tfvars"
+  fi
+  if [ -f "$REGISTRY/terraform.tfstate" ]; then
+    terraform -chdir="$REGISTRY" destroy -input=false -auto-approve -var "name=$NAME" -var force_delete=true -var "tags=$TAGS"
+  fi
+  if [ "$CERT_ARN" != "" ]; then
+    aws_cli acm delete-certificate --certificate-arn "$CERT_ARN"
+  fi
+
+  echo "--- leftovers tagged $TAG_KEY=$TAG_VALUE, run=$RUN_ID"
+  leftovers=""
+  for ((i = 0; i < 6; i++)); do
+    leftovers="$(aws_cli resourcegroupstaggingapi get-resources \
+      --tag-filters "Key=$TAG_KEY,Values=$TAG_VALUE" "Key=run,Values=$RUN_ID" \
+      --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n' | grep -v -e ':kms:' -e ':task-definition/' || true)"
+    [ "$leftovers" = "" ] && break
+    sleep 20
+  done
+  rm -rf "$WORK"
+  if [ "$leftovers" != "" ]; then
+    echo "FAIL: resources left behind, delete them by hand:" >&2
+    echo "$leftovers" >&2
+    exit 1
+  fi
+  echo "nothing left (KMS keys stay pending deletion for 30 days at no cost; ECS keeps"
+  echo "deregistered task definitions as INACTIVE, which cost nothing)"
+}
+trap teardown EXIT
+
+echo "--- self-signed certificate for the HTTPS listener"
+openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+  -subj "/CN=$NAME.example.com" \
+  -keyout "$WORK/key.pem" -out "$WORK/cert.pem" 2> /dev/null
+CERT_ARN="$(aws_cli acm import-certificate \
+  --certificate "fileb://$WORK/cert.pem" --private-key "fileb://$WORK/key.pem" \
+  --tags "Key=$TAG_KEY,Value=$TAG_VALUE" "Key=run,Value=$RUN_ID" \
+  --query CertificateArn --output text)"
+
+echo "--- registry"
+terraform -chdir="$REGISTRY" init -input=false > /dev/null
+terraform -chdir="$REGISTRY" apply -input=false -auto-approve -var "name=$NAME" -var force_delete=true -var "tags=$TAGS"
+REPO_URL="$(terraform -chdir="$REGISTRY" output -raw repository_url)"
+
+echo "--- build once, scan, push"
+docker build --platform linux/arm64 --build-arg "APP_VERSION=$RUN_ID" --tag "$REPO_URL:$RUN_ID" "$REPO_ROOT/app"
+"$REPO_ROOT/scripts/smoke-test.sh" "$REPO_URL:$RUN_ID"
+trivy image --quiet --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "$REPO_URL:$RUN_ID"
+aws_cli ecr get-login-password | docker login --username AWS --password-stdin "${REPO_URL%%/*}"
+docker push "$REPO_URL:$RUN_ID" > /dev/null
+DIGEST="$(aws_cli ecr describe-images --repository-name "$NAME" --image-ids "imageTag=$RUN_ID" \
+  --query 'imageDetails[0].imageDigest' --output text)"
+IMAGE="$REPO_URL@$DIGEST"
+echo "pushed $IMAGE"
+
+echo "--- service ($STRATEGY)"
+cat > "$WORK/service.tfvars" <<TFVARS
+name                = "$NAME"
+region              = "$REGION"
+certificate_arn     = "$CERT_ARN"
+deployment_strategy = "$STRATEGY"
+deletion_protection = false
+log_retention_days  = 1
+image               = "$IMAGE"
+app_version         = "$RUN_ID"
+tags                = $TAGS
+TFVARS
+VERIFY_INSECURE_TLS=1 TF_VAR_FILE="$WORK/service.tfvars" TF_SERVICE_DIR="$SERVICE" \
+  "$REPO_ROOT/scripts/deploy.sh" "$IMAGE" "$RUN_ID" 2>&1 | sed "s|$SERVICE|<service>|g"
+
+echo "--- live test passed"
