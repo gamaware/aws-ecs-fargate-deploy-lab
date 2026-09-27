@@ -19,7 +19,7 @@ mock_provider "aws" {
   }
   override_data {
     target = data.aws_elb_service_account.this
-    values = { arn = "arn:aws:iam::127311923021:root" }
+    values = { arn = "arn:aws:iam::111122223333:root" }
   }
 }
 

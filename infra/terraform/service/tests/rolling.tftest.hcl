@@ -19,7 +19,7 @@ mock_provider "aws" {
   }
   override_data {
     target = data.aws_elb_service_account.this
-    values = { arn = "arn:aws:iam::127311923021:root" }
+    values = { arn = "arn:aws:iam::111122223333:root" }
   }
 }
 
@@ -130,7 +130,7 @@ run "load_balancer_serves_https_only" {
 
   assert {
     condition     = startswith(aws_lb_listener.https[0].ssl_policy, "ELBSecurityPolicy-TLS13")
-    error_message = "The HTTPS listener must use a TLS 1.3 security policy."
+    error_message = "The HTTPS listener must use an ELBSecurityPolicy-TLS13 policy (TLS 1.2 and 1.3)."
   }
 
   assert {

@@ -1,5 +1,5 @@
-# Public Application Load Balancer: HTTPS only (port 80 redirects), TLS 1.3
-# policy, invalid headers dropped, access logs to S3.
+# Public Application Load Balancer: HTTPS only (port 80 redirects), TLS 1.2 and
+# 1.3 policy, invalid headers dropped, access logs to S3.
 
 resource "aws_security_group" "alb" {
   name        = "${var.name}-alb"
