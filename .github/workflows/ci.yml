@@ -20,28 +20,25 @@ jobs:
     name: Lint docs
     permissions:
       contents: read
-    uses: gamaware/.github/.github/workflows/lint-docs.yml@main
-    with:
-      # CHANGELOG.md is left out of Vale: it carries a tracked TODO by design.
-      vale-paths: README.md docs infra
+    uses: gamaware/.github/.github/workflows/lint-docs.yml@1255caafb08b06cc4658318c4dd48f9dea946c9e
 
   lint-actions:
     name: Lint workflows
     permissions:
       contents: read
-    uses: gamaware/.github/.github/workflows/lint-actions.yml@main
+    uses: gamaware/.github/.github/workflows/lint-actions.yml@1255caafb08b06cc4658318c4dd48f9dea946c9e
 
   secrets:
     name: Secret scan
     permissions:
       contents: read
-    uses: gamaware/.github/.github/workflows/secrets.yml@main
+    uses: gamaware/.github/.github/workflows/secrets.yml@1255caafb08b06cc4658318c4dd48f9dea946c9e
 
   security:
     name: Security
     permissions:
       contents: read
-    uses: gamaware/.github/.github/workflows/security.yml@main
+    uses: gamaware/.github/.github/workflows/security.yml@1255caafb08b06cc4658318c4dd48f9dea946c9e
     with:
       checkov-config: .checkov.yaml
       trivy-skip-dirs: app/node_modules
@@ -50,7 +47,7 @@ jobs:
     name: Terraform
     permissions:
       contents: read
-    uses: gamaware/.github/.github/workflows/terraform.yml@main
+    uses: gamaware/.github/.github/workflows/terraform.yml@1255caafb08b06cc4658318c4dd48f9dea946c9e
     with:
       working-directories: '["infra/terraform/registry", "infra/terraform/service"]'
       terraform-version: 1.14.5
@@ -59,7 +56,7 @@ jobs:
     name: Container
     permissions:
       contents: read
-    uses: gamaware/.github/.github/workflows/container.yml@main
+    uses: gamaware/.github/.github/workflows/container.yml@1255caafb08b06cc4658318c4dd48f9dea946c9e
     with:
       context: app
       dockerfile: app/Dockerfile

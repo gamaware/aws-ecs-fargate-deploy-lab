@@ -18,9 +18,8 @@ All notable changes to this project are documented here. The format follows
   dashboard, and optional CodeDeploy blue/green.
 - Mocked `terraform test` suites for both stacks.
 - CI (`make verify` jobs), deploy workflow (build once, scan, push by digest, deploy), OpenSSF Scorecard.
-- Seven ADRs, runbook, live-test guide and diagrams.
+- Seven ADRs, runbook, live-test guide, diagrams and a 1280x640 social preview.
 
 ### Security
 
-- TODO: re-pin the `gamaware/.github` reusable workflows in `.github/workflows/ci.yml` from `@main` to a reviewed
-  commit SHA, then drop the `gamaware/*` exception in `zizmor.yml`.
+- Shared reusable workflows from `gamaware/.github` are called pinned to a full commit SHA.

@@ -1,0 +1,24 @@
+<rect x="40" y="70" width="150" height="110" rx="6"/><circle cx="60" cy="88" r="5"/><circle cx="78" cy="88" r="5"/>
+  <path d="M40,104 H190" stroke-opacity=".55"/><path d="M60,128 H140" stroke-opacity=".55"/><path d="M60,146 H164" stroke-opacity=".55"/><path d="M60,164 H120" stroke-opacity=".55"/>
+  <text x="115" y="212" text-anchor="middle" stroke="none" fill="#FFFFFF">app</text>
+  <path d="M190,125 L240,125" stroke="#FFFFFF"/><path d="M250,125 l-12,-6 v12 z" fill="#FFFFFF" stroke="none"/>
+  <path d="M252,74 H320 L346,100 V180 H252 Z M320,74 V100 H346"/>
+  <path d="M268,118 H324" stroke-opacity=".55"/><path d="M268,136 H312" stroke-opacity=".55"/><path d="M268,154 H328" stroke-opacity=".55"/>
+  <text x="300" y="212" text-anchor="middle" stroke="none" fill="#FFFFFF">Dockerfile</text>
+  <path d="M346,125 L410,125" stroke="#FFFFFF"/><path d="M420,125 l-12,-6 v12 z" fill="#FFFFFF" stroke="none"/>
+  <rect x="422" y="70" width="150" height="110" rx="6"/>
+  <path d="M470,96 L497,84 L524,96 L497,108 Z M470,118 L497,130 L524,118 M470,140 L497,152 L524,140"/>
+  <text x="497" y="212" text-anchor="middle" stroke="none" fill="#FFFFFF">ECR</text>
+  <path d="M497,224 V330" stroke-dasharray="6 8"/><path d="M497,336 l-6,-12 h12 z" fill="#FFFFFF" stroke="none"/>
+  <circle cx="110" cy="440" r="44"/>
+  <path d="M84,440 H136 M110,440 L132,418 M110,440 L132,462" /><path d="M136,440 l-10,-5 v10 z" fill="#FFFFFF" stroke="none"/>
+  <text x="110" y="516" text-anchor="middle" stroke="none" fill="#FFFFFF">ALB</text>
+  <path d="M24,440 L54,440" stroke="#FFC34D"/><path d="M64,440 l-12,-6 v12 z" fill="#FFC34D" stroke="none"/>
+  <path d="M154,440 H236 M200,380 V500 M200,380 H236 M200,500 H236"/>
+  <path d="M236,380 l-10,-5 v10 z M236,440 l-10,-5 v10 z M236,500 l-10,-5 v10 z" fill="#FFFFFF" stroke="none"/>
+  <rect x="240" y="340" width="440" height="200" rx="10" stroke-dasharray="8 8"/>
+  <rect x="262" y="352" width="124" height="56" rx="6"/><rect x="262" y="412" width="124" height="56" rx="6"/><rect x="262" y="472" width="124" height="56" rx="6"/>
+  <path d="M282,380 H366" stroke-opacity=".55"/><path d="M282,440 H366" stroke-opacity=".55"/><path d="M282,500 H366" stroke-opacity=".55"/>
+  <rect x="420" y="376" width="236" height="128" rx="8" stroke-opacity=".5"/>
+  <path d="M440,408 H636 M440,440 H600 M440,472 H560" stroke-opacity=".35"/>
+  <text x="460" y="580" text-anchor="middle" stroke="none" fill="#FFFFFF">Fargate service</text>
