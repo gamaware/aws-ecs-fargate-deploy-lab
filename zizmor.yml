@@ -1,0 +1,8 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Shared reusable workflows are called at @main until the repo re-pins
+        # them to a reviewed commit (tracked in CHANGELOG, Unreleased).
+        "gamaware/*": ref-pin
+        "*": hash-pin
