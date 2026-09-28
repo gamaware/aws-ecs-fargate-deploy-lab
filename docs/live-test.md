@@ -52,7 +52,11 @@ A live run never creates anything reachable from the internet (ADR
   `python3 scripts/check_private_plan.py` on it. The checker fails on internet gateways, public NAT gateways, default
   routes to a gateway, load balancers that are not internal, security group ingress from `0.0.0.0/0` or `::/0`, ECS
   services or instances with public IP addresses, subnets that map public IPs, Elastic IPs and other public entry
-  points. Any violation stops the run before anything is created. The service plan is checked twice: with
+  points.
+  It also refuses any Route 53 resource (hosted zones, records, health checks), a public EKS API endpoint and public S3
+  or ECR access: an ECR Public repository, an S3 website endpoint, a public bucket ACL, a public access block with any
+  setting off, or a bucket or repository policy that allows any principal without a condition.
+  Any violation stops the run before anything is created. The service plan is checked twice: with
   placeholders for the image digest and certificate before anything exists, and with the real values before
   `scripts/deploy.sh` applies it.
 - **Offline tests.** `make verify` runs `tests/test_check_private_plan.py` (the checker's rules) and

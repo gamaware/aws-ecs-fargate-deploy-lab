@@ -21,6 +21,8 @@ A live run never creates anything reachable from the internet.
   the private subnets with `internal = true`, and replaces `ingress_cidrs` with the VPC CIDR. Tasks keep
   `assign_public_ip = false` and reach ECR, S3 and CloudWatch Logs through the VPC endpoints (ADR 0003).
   `test_listener_cidrs` rejects `0.0.0.0/0` when `private_only` is `true`.
+- The live test creates no Route 53 resource; the pre-flight checker refuses any, and also refuses public S3, ECR,
+  EKS or API endpoints.
 - Before anything is created, the script plans the registry stack and the service stack with the live variables
   (placeholders of the same shape for the image digest and certificate, which do not exist yet), writes
   `terraform show -json` output to the run's temporary directory, and runs `scripts/check_private_plan.py` on it.
