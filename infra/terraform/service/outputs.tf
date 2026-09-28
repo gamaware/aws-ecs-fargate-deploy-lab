@@ -3,6 +3,16 @@ output "alb_dns_name" {
   value       = aws_lb.this.dns_name
 }
 
+output "alb_arn" {
+  description = "Load balancer ARN (make test-live reads target health through it)."
+  value       = aws_lb.this.arn
+}
+
+output "alb_internal" {
+  description = "true when the load balancer is internal (private_only)."
+  value       = aws_lb.this.internal
+}
+
 output "alb_zone_id" {
   description = "Hosted zone ID of the load balancer, for a Route 53 alias record."
   value       = aws_lb.this.zone_id

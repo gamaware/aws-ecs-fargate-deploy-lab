@@ -2,6 +2,15 @@
 # tasks run in private subnets with no route to the internet. They reach ECR,
 # S3 (image layers) and CloudWatch Logs through VPC endpoints instead of a
 # NAT gateway. See docs/adr/0003-private-tasks-with-vpc-endpoints.md.
+#
+# private_only = true (make test-live) drops the public tier entirely: no
+# internet gateway, no public subnets, no default route, and the load balancer
+# moves into the private subnets as an internal one.
+# See docs/adr/0008-live-tests-run-private-only.md.
+
+locals {
+  public_az_count = var.private_only ? 0 : var.az_count
+}
 
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
@@ -18,12 +27,14 @@ resource "aws_default_security_group" "this" {
 }
 
 resource "aws_internet_gateway" "this" {
+  count = var.private_only ? 0 : 1
+
   vpc_id = aws_vpc.this.id
   tags   = { Name = var.name }
 }
 
 resource "aws_subnet" "public" {
-  count = var.az_count
+  count = local.public_az_count
 
   vpc_id            = aws_vpc.this.id
   availability_zone = local.azs[count.index]
@@ -43,21 +54,25 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_route_table" "public" {
+  count = var.private_only ? 0 : 1
+
   vpc_id = aws_vpc.this.id
   tags   = { Name = "${var.name}-public" }
 }
 
 resource "aws_route" "public_internet" {
-  route_table_id         = aws_route_table.public.id
+  count = var.private_only ? 0 : 1
+
+  route_table_id         = aws_route_table.public[0].id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.this.id
+  gateway_id             = aws_internet_gateway.this[0].id
 }
 
 resource "aws_route_table_association" "public" {
-  count = var.az_count
+  count = local.public_az_count
 
   subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
+  route_table_id = aws_route_table.public[0].id
 }
 
 # No default route: private subnets only reach the VPC and its endpoints.

@@ -45,8 +45,14 @@ variable "az_count" {
   }
 }
 
+variable "private_only" {
+  description = "Build no internet path: no internet gateway or public subnets, an internal load balancer in the private subnets, and client ingress from the VPC CIDR only (ingress_cidrs is ignored). make test-live sets it to true."
+  type        = bool
+  default     = false
+}
+
 variable "ingress_cidrs" {
-  description = "Client CIDRs allowed to reach the load balancer on 80 and 443."
+  description = "Client CIDRs allowed to reach the load balancer on 80 and 443. Ignored when private_only is true."
   type        = list(string)
   default     = ["0.0.0.0/0"]
 
@@ -182,6 +188,11 @@ variable "test_listener_cidrs" {
   description = "CIDRs allowed to reach the CodeDeploy test listener (port 9443) to check the green tasks before the shift. Empty = nobody."
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = !var.private_only || alltrue([for c in var.test_listener_cidrs : c != "0.0.0.0/0"])
+    error_message = "test_listener_cidrs must not contain 0.0.0.0/0 when private_only is true."
+  }
 }
 
 variable "desired_count" {

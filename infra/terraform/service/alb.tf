@@ -1,14 +1,20 @@
-# Public Application Load Balancer: HTTPS only (port 80 redirects), TLS 1.2 and
-# 1.3 policy, invalid headers dropped, access logs to S3.
+# Application Load Balancer: HTTPS only (port 80 redirects), TLS 1.2 and 1.3
+# policy, invalid headers dropped, access logs to S3. Public by default;
+# internal, in the private subnets and reachable from the VPC CIDR only when
+# private_only is true.
+
+locals {
+  alb_ingress_cidrs = var.private_only ? [var.vpc_cidr] : var.ingress_cidrs
+}
 
 resource "aws_security_group" "alb" {
   name        = "${var.name}-alb"
-  description = "Public load balancer"
+  description = "Service load balancer"
   vpc_id      = aws_vpc.this.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_https" {
-  for_each = toset(var.ingress_cidrs)
+  for_each = toset(local.alb_ingress_cidrs)
 
   security_group_id = aws_security_group.alb.id
   description       = "HTTPS from clients"
@@ -20,7 +26,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https" {
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   #checkov:skip=CKV_AWS_260:Port 80 only answers with a redirect to HTTPS (aws_lb_listener.http).
-  for_each = toset(var.ingress_cidrs)
+  for_each = toset(local.alb_ingress_cidrs)
 
   security_group_id = aws_security_group.alb.id
   description       = "HTTP from clients, answered with a redirect to HTTPS"
@@ -50,15 +56,16 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_tasks" {
   to_port                      = var.container_port
 }
 
-# Public by design: this load balancer is the service's internet entry point.
+# Public by default: this load balancer is the service's internet entry point.
+# private_only = true makes it internal.
 #trivy:ignore:AWS-0053
 resource "aws_lb" "this" {
   #checkov:skip=CKV2_AWS_20:Port 80 exists only to redirect to HTTPS (aws_lb_listener.http).
   name                       = var.name
   load_balancer_type         = "application"
-  internal                   = false
+  internal                   = var.private_only
   security_groups            = [aws_security_group.alb.id]
-  subnets                    = aws_subnet.public[*].id
+  subnets                    = var.private_only ? aws_subnet.private[*].id : aws_subnet.public[*].id
   drop_invalid_header_fields = true
   enable_deletion_protection = var.deletion_protection
   idle_timeout               = 60

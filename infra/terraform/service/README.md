@@ -11,7 +11,11 @@ terraform apply
 ```
 
 Tests run offline against a mocked provider: `terraform test` (`tests/rolling.tftest.hcl`,
-`tests/codedeploy.tftest.hcl`, `tests/validation.tftest.hcl`).
+`tests/codedeploy.tftest.hcl`, `tests/validation.tftest.hcl`, `tests/live_private.tftest.hcl`).
+
+`private_only = true` builds the stack with no internet path: no internet gateway, public subnets or default route,
+an internal load balancer in the private subnets, and client ingress from the VPC CIDR only. `make test-live` always
+sets it; `tests/live_private.tftest.hcl` fails if that configuration would create anything internet-facing.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -121,13 +125,14 @@ Tests run offline against a mocked provider: `terraform test` (`tests/rolling.tf
 | deletion\_protection | Protect the load balancer from deletion. Turn off only for disposable environments. | `bool` | `true` | no |
 | deployment\_strategy | rolling: ECS rolling update with the deployment circuit breaker. codedeploy: blue/green through AWS CodeDeploy. | `string` | `"rolling"` | no |
 | desired\_count | Tasks to start with; autoscaling adjusts it afterwards. | `number` | `2` | no |
-| ingress\_cidrs | Client CIDRs allowed to reach the load balancer on 80 and 443. | `list(string)` | ```[ "0.0.0.0/0" ]``` | no |
+| ingress\_cidrs | Client CIDRs allowed to reach the load balancer on 80 and 443. Ignored when private\_only is true. | `list(string)` | ```[ "0.0.0.0/0" ]``` | no |
 | log\_level | LOG\_LEVEL for the app. | `string` | `"info"` | no |
 | log\_retention\_days | CloudWatch Logs retention in days for the app, VPC flow logs and WAF logs. | `number` | `365` | no |
 | max\_capacity | Autoscaling ceiling; caps cost during a traffic spike. | `number` | `6` | no |
 | memory | Task memory in MiB; must be a valid Fargate pairing for cpu. | `number` | `512` | no |
 | min\_capacity | Autoscaling floor. Two or more keeps a task in a second Availability Zone. | `number` | `2` | no |
 | name | Service name; prefixes every resource. | `string` | `"harbor-stock-api"` | no |
+| private\_only | Build no internet path: no internet gateway or public subnets, an internal load balancer in the private subnets, and client ingress from the VPC CIDR only (ingress\_cidrs is ignored). make test-live sets it to true. | `bool` | `false` | no |
 | region | AWS Region for the service. | `string` | `"us-east-1"` | no |
 | requests\_per\_target | ALB requests per task per minute the service scales to hold (rolling strategy only). | `number` | `1000` | no |
 | tags | Extra tags for every resource. | `map(string)` | `{}` | no |
@@ -139,7 +144,9 @@ Tests run offline against a mocked provider: `terraform test` (`tests/rolling.tf
 
 | Name | Description |
 | ---- | ----------- |
+| alb\_arn | Load balancer ARN (make test-live reads target health through it). |
 | alb\_dns\_name | Load balancer DNS name; point the service's DNS record (CNAME or alias) at it. |
+| alb\_internal | true when the load balancer is internal (private\_only). |
 | alb\_zone\_id | Hosted zone ID of the load balancer, for a Route 53 alias record. |
 | cluster\_name | ECS cluster name. |
 | codedeploy\_app\_name | CodeDeploy application (null for the rolling strategy). |
