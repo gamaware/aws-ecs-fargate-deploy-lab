@@ -23,7 +23,9 @@ runs in CI, and nothing it writes is committed.
    directory, prints the path and exits with an error so the destroy can be run again.
 
 All resources carry `purpose=portfolio-test` and a `run` tag. State and temporary files live in a `mktemp` directory
-outside the repository and are deleted at the end.
+outside the repository and are deleted at the end. If the account requires more tags on every create (a tag policy
+or an SCP), pass them at run time as `TEST_LIVE_EXTRA_TAGS="Key1=value1,Key2=value2"`; the script adds them to the
+Terraform default tags and the certificate. Never commit the values.
 
 ## Prerequisites
 

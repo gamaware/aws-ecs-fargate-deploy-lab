@@ -19,6 +19,7 @@
 # Env: LIVE_STRATEGY=rolling|codedeploy (default rolling)
 #      LIVE_REGION (default us-east-1)
 #      LIVE_YES=1 skips the confirmation prompt
+#      TEST_LIVE_EXTRA_TAGS="Key=value,..." extra tags on everything created
 # Output goes to a temporary directory outside the repository.
 set -euo pipefail
 
@@ -53,7 +54,22 @@ cp -R "$REPO_ROOT/infra/terraform" "$WORK/terraform"
 rm -rf "$WORK"/terraform/*/.terraform "$WORK"/terraform/*/terraform.tfstate*
 REGISTRY="$WORK/terraform/registry"
 SERVICE="$WORK/terraform/service"
-TAGS="{\"$TAG_KEY\"=\"$TAG_VALUE\",\"run\"=\"$RUN_ID\"}"
+TAGS_HCL="\"$TAG_KEY\"=\"$TAG_VALUE\",\"run\"=\"$RUN_ID\""
+EXTRA_TAG_ARGS=()
+# Tags the account may require on every create (a tag policy or SCP), given at
+# run time only: TEST_LIVE_EXTRA_TAGS="Key1=value1,Key2=value2". Never commit values.
+IFS=',' read -r -a extra_pairs <<< "${TEST_LIVE_EXTRA_TAGS:-}"
+for pair in "${extra_pairs[@]}"; do
+  key="${pair%%=*}"
+  value="${pair#*=}"
+  if [[ "$pair" != *=* || ! "$key" =~ ^[A-Za-z0-9_.:/+@-]+$ || ! "$value" =~ ^[A-Za-z0-9_.:/+@=\ -]*$ ]]; then
+    echo "TEST_LIVE_EXTRA_TAGS: '$pair' is not Key=value with plain characters" >&2
+    exit 1
+  fi
+  TAGS_HCL+=",\"$key\"=\"$value\""
+  EXTRA_TAG_ARGS+=("Key=$key,Value=$value")
+done
+TAGS="{$TAGS_HCL}"
 REGISTRY_VARS=(-var "name=$NAME" -var force_delete=true -var "tags=$TAGS")
 CERT_ARN=""
 
@@ -182,7 +198,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
   -keyout "$WORK/key.pem" -out "$WORK/cert.pem" 2> /dev/null
 CERT_ARN="$(aws_cli acm import-certificate \
   --certificate "fileb://$WORK/cert.pem" --private-key "fileb://$WORK/key.pem" \
-  --tags "Key=$TAG_KEY,Value=$TAG_VALUE" "Key=run,Value=$RUN_ID" \
+  --tags "Key=$TAG_KEY,Value=$TAG_VALUE" "Key=run,Value=$RUN_ID" "${EXTRA_TAG_ARGS[@]}" \
   --query CertificateArn --output text)"
 
 echo "--- registry (the plan checked above)"
