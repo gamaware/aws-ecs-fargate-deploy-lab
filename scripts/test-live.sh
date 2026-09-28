@@ -46,6 +46,34 @@ SERVICE="$WORK/terraform/service"
 TAGS="{\"$TAG_KEY\"=\"$TAG_VALUE\",\"run\"=\"$RUN_ID\"}"
 CERT_ARN=""
 
+# The tagging API keeps deleted resources listed for a while (VPC endpoints,
+# INACTIVE ECS clusters and services), so ask each service whether the ARN
+# still exists. Unknown types count as present.
+still_exists() {
+  local arn="$1" id="${1##*/}"
+  case "$arn" in
+    *:ecs:*:cluster/*)
+      [ "$(aws_cli ecs describe-clusters --clusters "$arn" \
+        --query "clusters[?status!='INACTIVE'] | length(@)" --output text)" != "0" ] ;;
+    *:ecs:*:service/*)
+      [ "$(aws_cli ecs describe-services --cluster "$(cut -d/ -f2 <<< "$arn")" --services "$arn" \
+        --query "services[?status!='INACTIVE'] | length(@)" --output text)" != "0" ] ;;
+    *:ecs:*:task/*)
+      [ "$(aws_cli ecs describe-tasks --cluster "$(cut -d/ -f2 <<< "$arn")" --tasks "$arn" \
+        --query "tasks[?lastStatus!='STOPPED'] | length(@)" --output text)" != "0" ] ;;
+    *:vpc-endpoint/*)
+      [ "$(aws_cli ec2 describe-vpc-endpoints --filters "Name=vpc-endpoint-id,Values=$id" \
+        --query "VpcEndpoints[?State!='deleted'] | length(@)" --output text)" != "0" ] ;;
+    *:security-group/*)
+      [ "$(aws_cli ec2 describe-security-groups --filters "Name=group-id,Values=$id" \
+        --query 'length(SecurityGroups)' --output text)" != "0" ] ;;
+    *:security-group-rule/*)
+      [ "$(aws_cli ec2 describe-security-group-rules --filters "Name=security-group-rule-id,Values=$id" \
+        --query 'length(SecurityGroupRules)' --output text)" != "0" ] ;;
+    *) true ;;
+  esac
+}
+
 teardown() {
   set +e
   echo "--- teardown"
@@ -62,9 +90,14 @@ teardown() {
   echo "--- leftovers tagged $TAG_KEY=$TAG_VALUE, run=$RUN_ID"
   leftovers=""
   for ((i = 0; i < 6; i++)); do
-    leftovers="$(aws_cli resourcegroupstaggingapi get-resources \
+    leftovers=""
+    while read -r arn; do
+      if still_exists "$arn"; then
+        leftovers+="$arn"$'\n'
+      fi
+    done < <(aws_cli resourcegroupstaggingapi get-resources \
       --tag-filters "Key=$TAG_KEY,Values=$TAG_VALUE" "Key=run,Values=$RUN_ID" \
-      --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n' | grep -v -e ':kms:' -e ':task-definition/' || true)"
+      --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n' | sort -u | grep -v -e '^$' -e ':kms:' -e ':task-definition/')
     [ "$leftovers" = "" ] && break
     sleep 20
   done

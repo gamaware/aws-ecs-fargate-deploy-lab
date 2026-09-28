@@ -14,7 +14,8 @@ runs in CI, and nothing it writes is committed.
 5. On exit, including failures and Ctrl-C: destroys the service and registry stacks, deletes the certificate, then
    lists anything still tagged `purpose=portfolio-test` for this run and fails if something is left. KMS keys stay
    pending deletion for 30 days and ECS keeps deregistered task definitions as inactive; both are free and are
-   excluded from that list.
+   excluded from that list. The tagging API keeps listing deleted VPC endpoints, security group rules and inactive
+   ECS clusters, services and tasks for a while, so the script asks each service whether those still exist.
 
 All resources carry `purpose=portfolio-test` and a `run` tag. State and temporary files live in a `mktemp` directory
 outside the repository and are deleted at the end.
