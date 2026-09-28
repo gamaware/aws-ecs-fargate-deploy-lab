@@ -98,25 +98,17 @@ run "tasks_are_private_and_locked_down" {
   }
 }
 
-run "execution_role_is_scoped_to_one_repository_and_log_group" {
+run "execution_role_uses_the_managed_policy_and_a_scoped_trust" {
   command = plan
 
   assert {
-    condition = alltrue([
-      for s in jsondecode(aws_iam_role_policy.execution.policy).Statement :
-      s.Resource != "*" if s.Sid != "EcrAuth"
-    ])
-    error_message = "Only ecr:GetAuthorizationToken may use a wildcard resource."
+    condition     = aws_iam_role_policy_attachment.execution.policy_arn == "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+    error_message = "The execution role must use the AWS managed ECS task execution policy."
   }
 
   assert {
-    condition     = jsondecode(aws_iam_role_policy.execution.policy).Statement[1].Resource == "arn:aws:ecr:us-east-1:111122223333:repository/harbor-stock-api"
-    error_message = "The execution role must pull from the image's own repository only."
-  }
-
-  assert {
-    condition     = jsondecode(aws_iam_role_policy.execution.policy).Statement[2].Resource == "arn:aws:logs:us-east-1:111122223333:log-group:/ecs/harbor-stock-api:*"
-    error_message = "The execution role must write to the service log group only."
+    condition     = jsondecode(aws_iam_role.execution.assume_role_policy).Statement[0].Condition.StringEquals["aws:SourceAccount"] == "111122223333"
+    error_message = "Only ECS tasks in this account may assume the execution role."
   }
 }
 

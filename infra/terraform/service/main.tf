@@ -13,10 +13,5 @@ locals {
   partition  = data.aws_partition.current.partition
   region     = data.aws_region.current.region
 
-  # Parsed from the digest-pinned image, so the execution role can pull from
-  # exactly that repository and nothing else.
-  image_parts        = regex("^([0-9]{12})\\.dkr\\.ecr\\.([a-z0-9-]+)\\.amazonaws\\.com/([^@]+)@", var.image)
-  ecr_repository_arn = "arn:${local.partition}:ecr:${local.image_parts[1]}:${local.image_parts[0]}:repository/${local.image_parts[2]}"
-
   codedeploy = var.deployment_strategy == "codedeploy"
 }

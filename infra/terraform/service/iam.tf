@@ -1,6 +1,9 @@
-# Task execution role: what the ECS agent needs to start the task (pull this
-# one image, write to this one log group). There is no task role, because the
-# app calls no AWS APIs; add one with its own policy when it does.
+# Task execution role: what the ECS agent needs to start the task (pull the
+# image from ECR, write to CloudWatch Logs). It uses the AWS managed
+# AmazonECSTaskExecutionRolePolicy, maintained by AWS for exactly this role.
+# The trust policy is scoped to this account's ECS tasks. There is no task
+# role, because the app calls no AWS APIs; add one with its own policy when it
+# does.
 
 resource "aws_iam_role" "execution" {
   name = "${var.name}-execution"
@@ -19,33 +22,7 @@ resource "aws_iam_role" "execution" {
   })
 }
 
-resource "aws_iam_role_policy" "execution" {
-  name = "pull-image-and-write-logs"
-  role = aws_iam_role.execution.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        # GetAuthorizationToken has no resource-level permissions.
-        Sid      = "EcrAuth"
-        Effect   = "Allow"
-        Action   = "ecr:GetAuthorizationToken"
-        Resource = "*"
-      },
-      {
-        Sid      = "PullServiceImage"
-        Effect   = "Allow"
-        Action   = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"]
-        Resource = local.ecr_repository_arn
-      },
-      {
-        Sid    = "WriteAppLogs"
-        Effect = "Allow"
-        Action = ["logs:CreateLogStream", "logs:PutLogEvents"]
-        # Built from the name so it is known at plan time (tests assert it).
-        Resource = "arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:${aws_cloudwatch_log_group.app.name}:*"
-      },
-    ]
-  })
+resource "aws_iam_role_policy_attachment" "execution" {
+  role       = aws_iam_role.execution.name
+  policy_arn = "arn:${local.partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }

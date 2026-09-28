@@ -21,8 +21,8 @@ deploy.
 ## Consequences
 
 - The pipeline deploys by running `terraform apply` on the service stack only, with a small blast radius.
-- The execution role reads the repository ARN from the image reference, so the service stack does not need the
-  registry's state.
+- The service stack does not need the registry's state: the image reference carries the repository, and the
+  execution role uses the AWS managed `AmazonECSTaskExecutionRolePolicy` to pull it.
 - A shared network for more services would mean splitting `network.tf` into a third stack.
 
 ## Compliance

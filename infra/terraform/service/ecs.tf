@@ -177,7 +177,7 @@ resource "aws_ecs_service" "rolling" {
     ignore_changes = [desired_count]
   }
 
-  depends_on = [aws_lb_listener.https, aws_lb_listener.https_codedeploy, aws_iam_role_policy.execution]
+  depends_on = [aws_lb_listener.https, aws_lb_listener.https_codedeploy, aws_iam_role_policy_attachment.execution]
 }
 
 # Blue/green through CodeDeploy. CodeDeploy, not Terraform, moves the service
@@ -215,7 +215,7 @@ resource "aws_ecs_service" "codedeploy" {
     ignore_changes = [desired_count, task_definition, load_balancer]
   }
 
-  depends_on = [aws_lb_listener.https, aws_lb_listener.https_codedeploy, aws_iam_role_policy.execution]
+  depends_on = [aws_lb_listener.https, aws_lb_listener.https_codedeploy, aws_iam_role_policy_attachment.execution]
 }
 
 locals {

@@ -67,7 +67,7 @@ scaling action overrides it.
 | 502 from the load balancer | Target group health, app logs around the time | Tasks restarting; check for `"msg":"close failed"` or crashes |
 | 503 from the load balancer | Target group has no healthy targets | All tasks draining or failing `/ready` |
 | Deployment rolled back | ECS service events, `aws ecs describe-services` | New image fails its health check or throws on start (bad `LOG_LEVEL`, `PORT`) |
-| `CannotPullContainerError` | Task stopped reason | Endpoint security group or S3 gateway route missing, or the image is in another repository than the execution role allows |
+| `CannotPullContainerError` | Task stopped reason | Endpoint security group or S3 gateway route missing, the image digest does not exist, or the image is in another account whose repository policy does not allow this one |
 | Requests blocked (403) | WAF logs group `aws-waf-logs-harbor-stock-api` | Rate limit or a managed rule; check `terminatingRuleId` |
 
 Useful Logs Insights query for the app log group:

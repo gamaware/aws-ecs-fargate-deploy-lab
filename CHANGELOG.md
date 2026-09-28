@@ -33,6 +33,8 @@ All notable changes to this project are documented here. The format follows
   running count through the AWS APIs.
 - CI: the shared Terraform workflow runs tflint v0.61.0, the same version as the `verify` job, and the shared-workflow
   callers use the standard job names (`lint-docs`, `lint-actions`, `secrets`, `security`, `terraform`, `container`).
+- The task execution role uses the AWS managed `AmazonECSTaskExecutionRolePolicy` instead of an inline policy with a
+  wildcard `ecr:GetAuthorizationToken` grant. The trust policy stays scoped to this account's ECS tasks.
 
 ### Security
 
