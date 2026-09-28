@@ -19,7 +19,20 @@ All notable changes to this project are documented here. The format follows
 - Mocked `terraform test` suites for both stacks.
 - CI (a `make verify` job next to the shared checks), deploy workflow (build once, scan, push by digest, deploy),
   OpenSSF Scorecard.
-- Seven ADRs, runbook, live-test guide, diagrams and a 1280x640 social preview.
+- Eight ADRs, runbook, live-test guide, diagrams and a 1280x640 social preview.
+- `private_only` variable on the service stack (internal load balancer, no internet gateway or public subnets,
+  ingress from the VPC CIDR only), always set by `make test-live`.
+- Live-test pre-flight: `scripts/check_private_plan.py` refuses a plan with internet-facing resources before any
+  apply; its unit tests and `tests/live_private.tftest.hcl` run in `make verify`.
+- `scripts/verify-deployment-private.sh`: post-deploy checks through the ECS and ELB APIs for an internal load
+  balancer.
+
+### Changed
+
+- `make test-live` no longer calls the service over the internet; it checks target health, steady state and the
+  running count through the AWS APIs.
+- CI: the shared Terraform workflow runs tflint v0.61.0, the same version as the `verify` job, and the shared-workflow
+  callers use the standard job names (`lint-docs`, `lint-actions`, `secrets`, `security`, `terraform`, `container`).
 
 ### Security
 

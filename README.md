@@ -82,6 +82,7 @@ Prerequisites (versions used to verify this repo):
 | uv | 0.12 or later |
 | Trivy | 0.74.0 |
 | hadolint | 2.15.1 |
+| Python | 3.13 (standard library only, for the live-test pre-flight tests) |
 
 ```bash
 make verify
@@ -98,7 +99,9 @@ verify: all checks passed
 `make help` lists the individual targets.
 
 A real deployment test is available as `make test-live`. It is manual, runs against the maintainer's `dev` profile, tags
-everything and tears it all down. See [docs/live-test.md](docs/live-test.md).
+everything and tears it all down. It runs private-only: an internal load balancer, no internet gateway or public
+subnets, a plan pre-flight that refuses internet-facing resources, and health checks through the ECS and ELB APIs
+(ADR 0008). See [docs/live-test.md](docs/live-test.md).
 
 ## Repository map
 
@@ -108,7 +111,8 @@ infra/terraform/
   registry/             ECR repository + KMS key (own state)
   service/              VPC, ALB, WAF, ECS, autoscaling, alarms, CodeDeploy option (own state)
     tests/              mocked terraform test suites
-scripts/                smoke test, deploy, post-deploy verification, live test
+scripts/                smoke test, deploy, post-deploy verification, live test and its private-plan pre-flight
+tests/                  unit tests of the private-plan pre-flight
 docs/
   adr/                  architecture decision records
   diagrams/             .drawio sources with SVG and PNG exports
@@ -131,6 +135,7 @@ Architecture decision records follow the *Fundamentals of Software Architecture*
 | [0005](docs/adr/0005-codedeploy-blue-green-as-an-option.md) | Blue/green through CodeDeploy as an option | Accepted |
 | [0006](docs/adr/0006-build-once-deploy-by-digest.md) | Build once, scan, push by digest, deploy that digest | Accepted |
 | [0007](docs/adr/0007-arm64-tasks.md) | ARM64 (Graviton) tasks | Accepted |
+| [0008](docs/adr/0008-live-tests-run-private-only.md) | Live tests run private-only | Accepted |
 
 ## Security and quality gates
 

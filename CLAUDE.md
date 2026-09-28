@@ -9,14 +9,16 @@ Fictional client "Harbor Goods". Offline verification only; never run anything a
 - `app/`: API source (`src/`), tests (`test/`), multi-stage `Dockerfile`. No runtime dependencies.
 - `infra/terraform/registry/`: ECR repository and KMS key (own state).
 - `infra/terraform/service/`: VPC, ALB, WAF, ECS service, autoscaling, alarms, optional CodeDeploy (own state).
-- `scripts/`: `smoke-test.sh`, `deploy.sh`, `verify-deployment.sh`, `test-live.sh`.
+- `scripts/`: `smoke-test.sh`, `deploy.sh`, `verify-deployment.sh`, `verify-deployment-private.sh`, `test-live.sh`,
+  `check_private_plan.py` (live-test pre-flight). `tests/`: its unit tests.
 - `docs/adr/`: decisions (FoSA2 format with Compliance). `docs/diagrams/`: `.drawio` sources plus SVG and PNG.
 
 ## Commands
 
-- `make verify`: everything CI runs (app tests, image build, smoke test, Terraform fmt/validate/tflint/test,
-  hadolint, Checkov, Trivy).
-- `make test-live`: manual, uses the `dev` profile, tags `purpose=portfolio-test`, destroys on exit.
+- `make verify`: everything CI runs (app tests, pre-flight unit tests, image build, smoke test, Terraform
+  fmt/validate/tflint/test, hadolint, Checkov, Trivy).
+- `make test-live`: manual, uses the `dev` profile, tags `purpose=portfolio-test`, destroys on exit. Always
+  `private_only = true`, with a plan pre-flight; never add an internet-facing resource to the live path (ADR 0008).
 
 ## Rules
 
