@@ -1,0 +1,20 @@
+{
+  "name": "harbor-stock-api",
+  "version": "1.0.0",
+  "description": "Stock lookup API for the fictional retailer Harbor Goods, packaged for ECS Fargate.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "test": "npm run build && node --test --test-reporter=spec \"dist/test/**/*.test.js\"",
+    "start": "node dist/src/main.js"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "typescript": "7.0.2"
+  }
+}

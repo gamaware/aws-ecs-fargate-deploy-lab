@@ -1,0 +1,7 @@
+# Build context allow-list: only what the build stage needs.
+*
+!package.json
+!package-lock.json
+!tsconfig.json
+!src/
+!test/

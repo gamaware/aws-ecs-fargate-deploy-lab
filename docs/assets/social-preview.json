@@ -1,0 +1,12 @@
+{
+  "color": "#A6400E",
+  "heading": ["Containerize & deploy", "to Amazon ECS"],
+  "subtitle": "Dockerfile · ECR · Fargate · CI/CD",
+  "steps": [
+    {"label": "Dockerfile & image", "icon": "social-preview/docker.svg"},
+    {"label": "Push to ECR", "icon": "social-preview/ecr.svg"},
+    {"label": "Fargate service & CI/CD", "icon": "social-preview/fargate.svg"}
+  ],
+  "illustration": "social-preview/illustration.svg",
+  "mark": "social-preview/mark.svg"
+}
