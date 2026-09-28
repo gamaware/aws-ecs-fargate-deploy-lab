@@ -15,7 +15,9 @@ runs in CI, and nothing it writes is committed.
    lists anything still tagged `purpose=portfolio-test` for this run and fails if something is left. KMS keys stay
    pending deletion for 30 days and ECS keeps deregistered task definitions as inactive; both are free and are
    excluded from that list. The tagging API keeps listing deleted VPC endpoints, security group rules and inactive
-   ECS clusters, services and tasks for a while, so the script asks each service whether those still exist.
+   ECS clusters, services and tasks for a while, so the script asks each service whether those still exist. If a
+   destroy fails (an expired SSO session, for example), the script keeps the Terraform state in its temporary
+   directory, prints the path and exits with an error so the destroy can be run again.
 
 All resources carry `purpose=portfolio-test` and a `run` tag. State and temporary files live in a `mktemp` directory
 outside the repository and are deleted at the end.

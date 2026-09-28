@@ -77,27 +77,38 @@ still_exists() {
 teardown() {
   set +e
   echo "--- teardown"
+  destroyed=1
   if [ -f "$SERVICE/terraform.tfstate" ]; then
-    terraform -chdir="$SERVICE" destroy -input=false -auto-approve -var-file="$WORK/service.tfvars"
+    terraform -chdir="$SERVICE" destroy -input=false -auto-approve -var-file="$WORK/service.tfvars" || destroyed=0
   fi
   if [ -f "$REGISTRY/terraform.tfstate" ]; then
-    terraform -chdir="$REGISTRY" destroy -input=false -auto-approve -var "name=$NAME" -var force_delete=true -var "tags=$TAGS"
+    terraform -chdir="$REGISTRY" destroy -input=false -auto-approve -var "name=$NAME" -var force_delete=true -var "tags=$TAGS" || destroyed=0
   fi
   if [ "$CERT_ARN" != "" ]; then
-    aws_cli acm delete-certificate --certificate-arn "$CERT_ARN"
+    aws_cli acm delete-certificate --certificate-arn "$CERT_ARN" || destroyed=0
+  fi
+  if [ "$destroyed" = "0" ]; then
+    # Keep the state so the destroy can be retried (for example after an
+    # expired SSO session): terraform -chdir=<dir> destroy -var-file=...
+    echo "FAIL: teardown did not complete; state kept in $WORK/terraform, rerun its destroy" >&2
+    exit 1
   fi
 
   echo "--- leftovers tagged $TAG_KEY=$TAG_VALUE, run=$RUN_ID"
   leftovers=""
   for ((i = 0; i < 6; i++)); do
+    if ! arns="$(aws_cli resourcegroupstaggingapi get-resources \
+      --tag-filters "Key=$TAG_KEY,Values=$TAG_VALUE" "Key=run,Values=$RUN_ID" \
+      --query 'ResourceTagMappingList[].ResourceARN' --output text)"; then
+      echo "FAIL: cannot list tagged resources; check tag run=$RUN_ID by hand" >&2
+      exit 1
+    fi
     leftovers=""
     while read -r arn; do
       if still_exists "$arn"; then
         leftovers+="$arn"$'\n'
       fi
-    done < <(aws_cli resourcegroupstaggingapi get-resources \
-      --tag-filters "Key=$TAG_KEY,Values=$TAG_VALUE" "Key=run,Values=$RUN_ID" \
-      --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n' | sort -u | grep -v -e '^$' -e ':kms:' -e ':task-definition/')
+    done < <(tr '\t' '\n' <<< "$arns" | sort -u | grep -v -e '^$' -e '^None$' -e ':kms:' -e ':task-definition/')
     [ "$leftovers" = "" ] && break
     sleep 20
   done
