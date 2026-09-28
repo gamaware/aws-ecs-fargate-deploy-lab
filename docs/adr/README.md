@@ -12,3 +12,4 @@ Records are never deleted; a replaced decision is marked Superseded and links to
 | [0005](0005-codedeploy-blue-green-as-an-option.md) | Blue/green through CodeDeploy as an option | Accepted |
 | [0006](0006-build-once-deploy-by-digest.md) | Build once, scan, push by digest, deploy that digest | Accepted |
 | [0007](0007-arm64-tasks.md) | ARM64 (Graviton) tasks | Accepted |
+| [0008](0008-live-tests-run-private-only.md) | Live tests run private-only | Accepted |
