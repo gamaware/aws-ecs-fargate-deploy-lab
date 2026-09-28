@@ -21,7 +21,7 @@ runner (`ubuntu-24.04-arm`), so the tested binary matches the one that runs.
 
 ## Compliance
 
-The Terraform test `tasks_are_private_and_locked_down` asserts ARM64. The `app` job in `ci.yml` and the `build`
+The Terraform test `tasks_are_private_and_locked_down` asserts ARM64. The `verify` job in `ci.yml` and the `build`
 job in `deploy.yml` run on `ubuntu-24.04-arm`.
 
 ## Notes
