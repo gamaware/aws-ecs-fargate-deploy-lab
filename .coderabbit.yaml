@@ -1,0 +1,31 @@
+language: en-US
+reviews:
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "app/**/*.ts"
+      instructions: >-
+        Node.js standard library only at runtime; no new runtime dependencies without an ADR. Config comes from
+        environment variables. Keep the SIGTERM drain contract (/ready 503, exit 0) intact.
+    - path: "app/Dockerfile"
+      instructions: >-
+        Base images must stay pinned by digest. The runtime stage must stay distroless, non-root, with no shell.
+    - path: "infra/terraform/**/*.tf"
+      instructions: >-
+        Check least privilege, no public IPs on tasks, no 0.0.0.0/0 egress from tasks, and that every Checkov or
+        Trivy skip carries a reason next to the resource. New behavior needs a terraform test assertion.
+    - path: "infra/terraform/**/tests/*.tftest.hcl"
+      instructions: >-
+        Tests must use mock_provider only and must not reach AWS.
+    - path: ".github/workflows/*.yml"
+      instructions: >-
+        Actions pinned by full SHA, permissions {} at workflow level, timeout-minutes on every job, event data
+        through env. Pull request workflows must never get id-token or AWS credentials.
+    - path: "**/*.sh"
+      instructions: >-
+        Must pass shellcheck and shellharden; quote variables; use arrays for arguments.
+    - path: "**/*.md"
+      instructions: >-
+        Lines up to 120 characters (tables exempt). Fictional names only (Harbor Goods, example.com, AWS
+        documentation account IDs). No dates.

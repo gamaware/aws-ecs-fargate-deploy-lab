@@ -1,0 +1,41 @@
+# Changelog
+
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), and the project uses
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- `harbor-stock-api`: TypeScript API on the Node.js standard library with liveness and readiness endpoints, JSON
+  logs and graceful SIGTERM draining, with unit tests and a process-level shutdown test.
+- Multi-stage Dockerfile onto a distroless, non-root Node.js runtime, both bases pinned by digest.
+- Local smoke test that runs the image with the ECS task constraints.
+- Terraform registry stack (ECR with immutable tags, scan on push, KMS, lifecycle policy).
+- Terraform service stack: VPC with private subnets and VPC endpoints, HTTPS load balancer with access logs, AWS WAF,
+  ECS Fargate on ARM64, deployment circuit breaker and alarm rollback, CPU and request autoscaling, alarms,
+  dashboard, and optional CodeDeploy blue/green.
+- Mocked `terraform test` suites for both stacks.
+- CI (a `make verify` job next to the shared checks), deploy workflow (build once, scan, push by digest, deploy),
+  OpenSSF Scorecard.
+- Eight ADRs, runbook, live-test guide, diagrams and a 1280x640 social preview.
+- `private_only` variable on the service stack (internal load balancer, no internet gateway or public subnets,
+  ingress from the VPC CIDR only), always set by `make test-live`.
+- Live-test pre-flight: `scripts/check_private_plan.py` refuses a plan with internet-facing resources before any
+  apply; its unit tests and `tests/live_private.tftest.hcl` run in `make verify`.
+- `scripts/verify-deployment-private.sh`: post-deploy checks through the ECS and ELB APIs for an internal load
+  balancer.
+
+### Changed
+
+- `make test-live` no longer calls the service over the internet; it checks target health, steady state and the
+  running count through the AWS APIs.
+- CI: the shared Terraform workflow runs tflint v0.61.0, the same version as the `verify` job, and the shared-workflow
+  callers use the standard job names (`lint-docs`, `lint-actions`, `secrets`, `security`, `terraform`, `container`).
+- The task execution role uses the AWS managed `AmazonECSTaskExecutionRolePolicy` instead of an inline policy with a
+  wildcard `ecr:GetAuthorizationToken` grant. The trust policy stays scoped to this account's ECS tasks.
+
+### Security
+
+- Shared reusable workflows from `gamaware/.github` are called pinned to a full commit SHA.

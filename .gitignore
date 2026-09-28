@@ -1,0 +1,31 @@
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+credentials.json
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+backend.tf
+*.tfvars
+!*.tfvars.example
+.terraform.tfstate.lock.info
+
+# Node
+app/node_modules/
+app/dist/
+
+# Tools
+.firecrawl/
+.claude-flow/
+.DS_Store
+styles/
+
+# Python
+__pycache__/
