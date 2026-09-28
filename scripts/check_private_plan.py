@@ -73,7 +73,10 @@ def _default_route_via_gateway(route: dict[str, Any], unknown: dict[str, Any]) -
 
 
 def _allows_anyone(policy: Any) -> bool:
-    """True when a policy document has an Allow statement for any principal ("*") and no Condition."""
+    """True when a policy document has an Allow statement for any principal ("*") and no Condition.
+
+    A wildcard counts under every principal key (AWS, Service, Federated, CanonicalUser), not only AWS.
+    """
     if not isinstance(policy, str) or not policy:
         return False
     try:
@@ -85,7 +88,9 @@ def _allows_anyone(policy: Any) -> bool:
         statements = [statements]
     for statement in statements:
         principal = statement.get("Principal")
-        anyone = principal == "*" or (isinstance(principal, dict) and "*" in _as_list(principal.get("AWS")))
+        anyone = principal == "*" or (
+            isinstance(principal, dict) and any("*" in _as_list(value) for value in principal.values())
+        )
         if statement.get("Effect") == "Allow" and anyone and not statement.get("Condition"):
             return True
     return False
@@ -121,8 +126,9 @@ def violations(plan: dict[str, Any]) -> list[str]:
             if after.get("cidr_ipv4") in WORLD or after.get("cidr_ipv6") in WORLD:
                 found.append(f"{address}: ingress from 0.0.0.0/0 or ::/0 on port {after.get('from_port')}")
         elif rtype == "aws_ecs_service":
+            # Only an explicit false passes: an absent or unknown value could resolve to true at apply time.
             for net in after.get("network_configuration") or []:
-                if net.get("assign_public_ip"):
+                if net.get("assign_public_ip") is not False:
                     found.append(f"{address}: ECS tasks must run with assign_public_ip = false")
         elif rtype == "aws_subnet" and after.get("map_public_ip_on_launch"):
             found.append(f"{address}: subnet maps public IP addresses on launch")

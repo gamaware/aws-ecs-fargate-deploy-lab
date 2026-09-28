@@ -47,6 +47,7 @@ ACCOUNT_PULL = json.dumps(
     {"Statement": [{"Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::111122223333:root"}, "Action": "ecr:*"}]}
 )
 OPEN_READ = json.dumps({"Statement": [{"Effect": "Allow", "Principal": "*", "Action": "s3:GetObject"}]})
+OPEN_SERVICE = json.dumps({"Statement": [{"Effect": "Allow", "Principal": {"Service": "*"}, "Action": "s3:GetObject"}]})
 OPEN_PULL = json.dumps({"Statement": {"Effect": "Allow", "Principal": {"AWS": ["*"]}, "Action": "ecr:BatchGetImage"}})
 
 PRIVATE = plan(
@@ -87,6 +88,11 @@ class InternetFacing(unittest.TestCase):
         "inline ingress": ("aws_security_group", {"ingress": [{"cidr_blocks": ["0.0.0.0/0"]}]}, None),
         "legacy ingress rule": ("aws_security_group_rule", {"type": "ingress", "ipv6_cidr_blocks": ["::/0"]}, None),
         "public ECS task": ("aws_ecs_service", {"network_configuration": [{"assign_public_ip": True}]}, None),
+        "ECS task with unknown public IP": (
+            "aws_ecs_service",
+            {"network_configuration": [{}]},
+            {"network_configuration": [{"assign_public_ip": True}]},
+        ),
         "internet gateway": ("aws_internet_gateway", {}, None),
         "public NAT gateway": ("aws_nat_gateway", {"connectivity_type": "public"}, None),
         "elastic IP": ("aws_eip", {}, None),
@@ -108,6 +114,7 @@ class InternetFacing(unittest.TestCase):
         "public EKS endpoint": ("aws_eks_cluster", {"vpc_config": [{"endpoint_public_access": True}]}, None),
         "public S3 bucket policy": ("aws_s3_bucket_policy", {"policy": OPEN_READ}, None),
         "public ECR policy": ("aws_ecr_repository_policy", {"policy": OPEN_PULL}, None),
+        "wildcard Service principal": ("aws_s3_bucket_policy", {"policy": OPEN_SERVICE}, None),
         "ECR Public repository": ("aws_ecrpublic_repository", {"repository_name": "x"}, None),
         "S3 website": ("aws_s3_bucket_website_configuration", {}, None),
         "weak public access block": ("aws_s3_bucket_public_access_block", {"block_public_policy": False}, None),
