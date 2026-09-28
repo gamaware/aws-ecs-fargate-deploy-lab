@@ -26,3 +26,6 @@ app/dist/
 .claude-flow/
 .DS_Store
 styles/
+
+# Python
+__pycache__/

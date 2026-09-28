@@ -13,16 +13,19 @@ CHECKOV_VERSION := 3.3.19
 TF_STACKS := infra/terraform/registry infra/terraform/service
 TFLINT_CONFIG := $(CURDIR)/.tflint.hcl
 
-.PHONY: help verify app-test image smoke tf-fmt tf-verify hadolint checkov trivy test-live clean
+.PHONY: help verify app-test private-plan-test image smoke tf-fmt tf-verify hadolint checkov trivy test-live clean
 
 help: ## List targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-10s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  %-18s %s\n", $$1, $$2}'
 
-verify: app-test image smoke tf-verify hadolint checkov trivy ## Run every offline check
+verify: app-test private-plan-test image smoke tf-verify hadolint checkov trivy ## Run every offline check
 	@echo "verify: all checks passed"
 
 app-test: ## Unit tests of the API (TypeScript build + node:test)
 	cd app && npm ci --no-audit --no-fund && npm test
+
+private-plan-test: ## Unit tests of the live-test pre-flight (scripts/check_private_plan.py)
+	python3 -m unittest discover -s tests -p 'test_check_private_plan.py'
 
 image: ## Build the container image (multi-stage; the build stage runs the tests again)
 	docker build --tag $(IMAGE) --build-arg APP_VERSION=local app
@@ -33,7 +36,7 @@ smoke: ## Run the image with the ECS constraints and probe it
 tf-fmt: ## Rewrite Terraform files to canonical format
 	terraform fmt -recursive infra/terraform
 
-tf-verify: ## fmt check, validate, tflint and mocked terraform test for each stack
+tf-verify: ## fmt check, validate, tflint and mocked terraform test (incl. live_private) for each stack
 	terraform fmt -check -recursive infra/terraform
 	for stack in $(TF_STACKS); do \
 	  echo "--- $$stack"; \
