@@ -9,7 +9,7 @@ locals {
 
 resource "aws_security_group" "alb" {
   name        = "${var.name}-alb"
-  description = "Service load balancer"
+  description = "Public load balancer"
   vpc_id      = aws_vpc.this.id
 }
 
