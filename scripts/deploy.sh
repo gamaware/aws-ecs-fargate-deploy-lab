@@ -7,7 +7,10 @@
 #    state; the circuit breaker and deployment alarms roll back a bad release.
 #    codedeploy strategy: start a CodeDeploy blue/green deployment of that
 #    revision and wait for it; CodeDeploy rolls back on failure or alarm.
-# 3. scripts/verify-deployment.sh checks what is actually serving.
+# 3. scripts/verify-deployment.sh checks what is actually serving over HTTPS.
+#    With an internal load balancer (private_only, as in make test-live),
+#    scripts/verify-deployment-private.sh checks it through the ECS and ELB
+#    APIs instead and sends no request to the service.
 #
 # Usage: scripts/deploy.sh <account>.dkr.ecr.<region>.amazonaws.com/<repo>@sha256:<digest> <app-version>
 # Env:   TF_BACKEND_CONFIG  path to a backend config file for terraform init (optional)
@@ -81,5 +84,10 @@ if [ "$strategy" = "codedeploy" ]; then
   fi
 fi
 
-"$(dirname "$0")/verify-deployment.sh" \
-  "$(out cluster_name)" "$(out service_name)" "$task_definition" "$(out alb_dns_name)" "$APP_VERSION"
+if [ "$(out alb_internal)" = "true" ]; then
+  "$(dirname "$0")/verify-deployment-private.sh" \
+    "$(out cluster_name)" "$(out service_name)" "$task_definition" "$(out alb_arn)" "$APP_VERSION"
+else
+  "$(dirname "$0")/verify-deployment.sh" \
+    "$(out cluster_name)" "$(out service_name)" "$task_definition" "$(out alb_dns_name)" "$APP_VERSION"
+fi

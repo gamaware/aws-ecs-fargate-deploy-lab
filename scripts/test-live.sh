@@ -4,6 +4,15 @@
 # resource purpose=portfolio-test, destroys everything on exit (success,
 # failure or Ctrl-C) and then checks that nothing tagged is left.
 #
+# Private-only: the service stack runs with private_only = true (internal load
+# balancer, no internet gateway, public subnets or default route, ingress from
+# the VPC CIDR only, tasks without public IPs). Before anything is created,
+# both stacks are planned with the live variables and
+# scripts/check_private_plan.py refuses the run if either plan has an
+# internet-facing resource. Health is checked through the ECS and ELB APIs
+# (scripts/verify-deployment-private.sh), never over the internet.
+# See docs/adr/0008-live-tests-run-private-only.md.
+#
 # Cost: under USD 0.25 for a 20-minute run (ALB, 2 Fargate tasks, 3 interface
 # endpoints x 2 AZs, WAF, all billed hourly; KMS keys pending deletion are free).
 #
@@ -29,6 +38,7 @@ aws_cli() {
 
 echo "Account for this run (profile $PROFILE):"
 aws sts get-caller-identity --profile "$PROFILE" --output table
+ACCOUNT_ID="$(aws sts get-caller-identity --profile "$PROFILE" --query Account --output text)"
 if [ "${LIVE_YES:-0}" != "1" ]; then
   read -r -p "Create and destroy $NAME ($STRATEGY) in $REGION on this account? [y/N] " answer
   [ "$answer" = "y" ] || exit 1
@@ -44,6 +54,7 @@ rm -rf "$WORK"/terraform/*/.terraform "$WORK"/terraform/*/terraform.tfstate*
 REGISTRY="$WORK/terraform/registry"
 SERVICE="$WORK/terraform/service"
 TAGS="{\"$TAG_KEY\"=\"$TAG_VALUE\",\"run\"=\"$RUN_ID\"}"
+REGISTRY_VARS=(-var "name=$NAME" -var force_delete=true -var "tags=$TAGS")
 CERT_ARN=""
 
 # The tagging API keeps deleted resources listed for a while (VPC endpoints,
@@ -82,7 +93,7 @@ teardown() {
     terraform -chdir="$SERVICE" destroy -input=false -auto-approve -var-file="$WORK/service.tfvars" || destroyed=0
   fi
   if [ -f "$REGISTRY/terraform.tfstate" ]; then
-    terraform -chdir="$REGISTRY" destroy -input=false -auto-approve -var "name=$NAME" -var force_delete=true -var "tags=$TAGS" || destroyed=0
+    terraform -chdir="$REGISTRY" destroy -input=false -auto-approve "${REGISTRY_VARS[@]}" || destroyed=0
   fi
   if [ "$CERT_ARN" != "" ]; then
     aws_cli acm delete-certificate --certificate-arn "$CERT_ARN" || destroyed=0
@@ -123,6 +134,48 @@ teardown() {
 }
 trap teardown EXIT
 
+# The live service configuration. private_only = true is what keeps the run
+# off the internet; the pre-flight below refuses the run if it is missing.
+write_service_tfvars() {
+  cat > "$WORK/service.tfvars" <<TFVARS
+name                = "$NAME"
+region              = "$REGION"
+certificate_arn     = "$1"
+deployment_strategy = "$STRATEGY"
+deletion_protection = false
+log_retention_days  = 1
+image               = "$2"
+app_version         = "$RUN_ID"
+tags                = $TAGS
+private_only        = true
+TFVARS
+}
+
+# Plan a stack with the live variables and refuse the run if the plan has
+# anything internet-facing. Plan and JSON stay in the run's temporary directory.
+preflight() {
+  local dir="$1" label="$2"
+  shift 2
+  echo "--- pre-flight: $label plan must be private-only"
+  terraform -chdir="$dir" plan -input=false -out="$WORK/$label.tfplan" "$@" > /dev/null
+  terraform -chdir="$dir" show -json "$WORK/$label.tfplan" > "$WORK/$label-plan.json"
+  if ! python3 "$REPO_ROOT/scripts/check_private_plan.py" "$WORK/$label-plan.json"; then
+    echo "FAIL: the $label plan is not private-only; nothing was applied" >&2
+    exit 1
+  fi
+}
+
+# Before anything exists: plan both stacks. The image and certificate do not
+# exist yet, so the service plan uses placeholders of the same shape; they do
+# not change the network, load balancer or security groups.
+terraform -chdir="$REGISTRY" init -input=false > /dev/null
+terraform -chdir="$SERVICE" init -input=false > /dev/null
+preflight "$REGISTRY" registry "${REGISTRY_VARS[@]}"
+write_service_tfvars \
+  "arn:aws:acm:$REGION:$ACCOUNT_ID:certificate/00000000-0000-0000-0000-000000000000" \
+  "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$NAME@sha256:$(printf '0%.0s' {1..64})"
+preflight "$SERVICE" service-placeholder -var-file="$WORK/service.tfvars"
+
 echo "--- self-signed certificate for the HTTPS listener"
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
   -subj "/CN=$NAME.example.com" \
@@ -132,9 +185,8 @@ CERT_ARN="$(aws_cli acm import-certificate \
   --tags "Key=$TAG_KEY,Value=$TAG_VALUE" "Key=run,Value=$RUN_ID" \
   --query CertificateArn --output text)"
 
-echo "--- registry"
-terraform -chdir="$REGISTRY" init -input=false > /dev/null
-terraform -chdir="$REGISTRY" apply -input=false -auto-approve -var "name=$NAME" -var force_delete=true -var "tags=$TAGS"
+echo "--- registry (the plan checked above)"
+terraform -chdir="$REGISTRY" apply -input=false "$WORK/registry.tfplan"
 REPO_URL="$(terraform -chdir="$REGISTRY" output -raw repository_url)"
 
 echo "--- build once, scan, push"
@@ -149,18 +201,11 @@ IMAGE="$REPO_URL@$DIGEST"
 echo "pushed $IMAGE"
 
 echo "--- service ($STRATEGY)"
-cat > "$WORK/service.tfvars" <<TFVARS
-name                = "$NAME"
-region              = "$REGION"
-certificate_arn     = "$CERT_ARN"
-deployment_strategy = "$STRATEGY"
-deletion_protection = false
-log_retention_days  = 1
-image               = "$IMAGE"
-app_version         = "$RUN_ID"
-tags                = $TAGS
-TFVARS
-VERIFY_INSECURE_TLS=1 TF_VAR_FILE="$WORK/service.tfvars" TF_SERVICE_DIR="$SERVICE" \
+write_service_tfvars "$CERT_ARN" "$IMAGE"
+preflight "$SERVICE" service -var-file="$WORK/service.tfvars"
+# deploy.sh applies the same variables and, because the load balancer is
+# internal, verifies through the ECS and ELB APIs.
+TF_VAR_FILE="$WORK/service.tfvars" TF_SERVICE_DIR="$SERVICE" \
   "$REPO_ROOT/scripts/deploy.sh" "$IMAGE" "$RUN_ID" 2>&1 | sed "s|$SERVICE|<service>|g"
 
 echo "--- live test passed"

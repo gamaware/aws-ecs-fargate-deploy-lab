@@ -4,7 +4,10 @@
 # public endpoint serves the expected version.
 #
 # Usage: scripts/verify-deployment.sh <cluster> <service> <task-definition-arn> <alb-dns-name> <app-version>
-# Env:   VERIFY_INSECURE_TLS=1  accept a self-signed certificate (make test-live only)
+# Env:   VERIFY_INSECURE_TLS=1  accept a self-signed certificate (a test environment with a public load balancer)
+#
+# make test-live never uses this script: its load balancer is internal, so
+# deploy.sh runs scripts/verify-deployment-private.sh instead.
 set -euo pipefail
 
 CLUSTER="$1"
