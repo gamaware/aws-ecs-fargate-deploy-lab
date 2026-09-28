@@ -96,6 +96,7 @@ PRIVATE = plan(
     ("aws_ecr_repository_policy", "pull", {"policy": ACCOUNT_PULL}, None),
     ("aws_s3_bucket_policy", "org", {"policy": ORG_READ}, None),
     ("aws_s3_bucket_policy", "org_paths", {"policy": ORG_PATHS_READ}, None),
+    ("aws_route_table", "empty", {"route": []}, {"route": []}),
 )
 
 
@@ -159,6 +160,9 @@ class InternetFacing(unittest.TestCase):
             {"policy": FOR_ALL_VALUES_OPTIONAL_READ},
             None,
         ),
+        "ECS network unknown until apply": ("aws_ecs_service", {}, {"network_configuration": True}),
+        "routes unknown until apply": ("aws_route_table", {}, {"route": True}),
+        "route list unknown until apply": ("aws_route_table", {"route": []}, {"route": [{"gateway_id": True}]}),
         "public ECR policy": ("aws_ecr_repository_policy", {"policy": OPEN_PULL}, None),
         "wildcard Service principal": ("aws_s3_bucket_policy", {"policy": OPEN_SERVICE}, None),
         "ECR Public repository": ("aws_ecrpublic_repository", {"repository_name": "x"}, None),
