@@ -23,6 +23,13 @@ mock_provider "aws" {
   }
 }
 
+# A known ARN at plan time, so the WAF logging destination can be asserted.
+override_resource {
+  target          = aws_cloudwatch_log_group.waf
+  override_during = plan
+  values          = { arn = "arn:aws:logs:us-east-1:111122223333:log-group:aws-waf-logs-harbor-stock-api" }
+}
+
 variables {
   certificate_arn = "arn:aws:acm:us-east-1:111122223333:certificate/1f2e3d4c-5b6a-4789-8abc-def012345678"
   image           = "111122223333.dkr.ecr.us-east-1.amazonaws.com/harbor-stock-api@sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
@@ -138,6 +145,16 @@ run "load_balancer_serves_https_only" {
   assert {
     condition     = contains([for r in aws_wafv2_web_acl.this.rule : r.name], "per-ip-rate-limit")
     error_message = "AWS WAF must rate-limit each client IP."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_log_group.waf.name == "aws-waf-logs-harbor-stock-api"
+    error_message = "AWS WAF logs must go to a log group whose name starts with aws-waf-logs-."
+  }
+
+  assert {
+    condition     = aws_wafv2_web_acl_logging_configuration.this.log_destination_configs == toset([aws_cloudwatch_log_group.waf.arn])
+    error_message = "The web ACL must log to the WAF log group."
   }
 }
 
