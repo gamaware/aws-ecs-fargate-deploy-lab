@@ -215,6 +215,32 @@ class InternetFacing(unittest.TestCase):
                 assert found[0].startswith(f"{rtype}.x: "), found
 
 
+class RouteTableConfig(unittest.TestCase):
+    """`route` is computed, so a table without inline routes plans as unknown; only inline routes are hidden."""
+
+    @staticmethod
+    def with_config(expressions, address="aws_route_table.private"):
+        doc = plan(("aws_route_table", "private", {}, {"route": True}))
+        doc["resource_changes"][0]["address"] = address
+        resource = {"address": "aws_route_table.private", "type": "aws_route_table", "expressions": expressions}
+        doc["configuration"] = {"root_module": {"module_calls": {"net": {"module": {"resources": [resource]}}}}}
+        return doc
+
+    def test_table_without_inline_routes_passes(self):
+        self.assertEqual(check.violations(self.with_config({"vpc_id": {}}, "module.net.aws_route_table.private")), [])
+
+    def test_table_with_inline_routes_unknown_is_refused(self):
+        doc = self.with_config({"route": {}}, "module.net.aws_route_table.private")
+        self.assertEqual(len(check.violations(doc)), 1)
+
+    def test_indexed_table_matches_its_config(self):
+        doc = self.with_config({"route": {}}, "module.net[0].aws_route_table.private[1]")
+        self.assertEqual(len(check.violations(doc)), 1)
+
+    def test_plan_without_configuration_stays_strict(self):
+        self.assertEqual(len(check.violations(plan(("aws_route_table", "private", {}, {"route": True})))), 1)
+
+
 class CommandLine(unittest.TestCase):
     def run_main(self, doc):
         tmp = tempfile.TemporaryDirectory()

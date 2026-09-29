@@ -13,6 +13,7 @@ a Terraform plan. Standard library only, so it runs before any project tooling i
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections.abc import Iterator
 from typing import Any
@@ -38,6 +39,7 @@ PUBLIC_ACLS = {"public-read", "public-read-write", "authenticated-read"}
 
 # Resource policies that could grant access to anyone: an Allow to "*" is refused unless a Condition limits the
 # caller to an account, organization, principal, source resource or VPC.
+ROUTE_TABLE_TYPES = ("aws_route_table", "aws_default_route_table")
 POLICY_TYPES = {"aws_s3_bucket_policy", "aws_ecr_repository_policy", "aws_ecrpublic_repository_policy"}
 
 # Condition keys that tie a statement to known callers. aws:SecureTransport, aws:SourceIp and similar keys do not:
@@ -169,6 +171,27 @@ def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else [value]
 
 
+def _inline_route_tables(plan: dict[str, Any]) -> set[str] | None:
+    """Config addresses (indexes removed) of route tables that declare inline `route` blocks.
+
+    None when the plan has no configuration section, so every route table is treated as declaring routes.
+    """
+    config = plan.get("configuration")
+    if not isinstance(config, dict) or not isinstance(config.get("root_module"), dict):
+        return None
+    found: set[str] = set()
+    pending: list[tuple[str, dict[str, Any]]] = [("", config["root_module"])]
+    while pending:
+        prefix, module = pending.pop()
+        for resource in module.get("resources") or []:
+            if resource.get("type") in ROUTE_TABLE_TYPES and "route" in (resource.get("expressions") or {}):
+                found.add(prefix + resource.get("address", ""))
+        for name, call in (module.get("module_calls") or {}).items():
+            if isinstance(call, dict) and isinstance(call.get("module"), dict):
+                pending.append((f"{prefix}module.{name}.", call["module"]))
+    return found
+
+
 def _route_table_violations(address: str, routes: list[Any], routes_unknown: Any) -> list[str]:
     """Inline routes: a route known only after apply is refused, even next to known routes."""
     if routes_unknown is True:
@@ -189,6 +212,7 @@ def _route_table_violations(address: str, routes: list[Any], routes_unknown: Any
 
 def violations(plan: dict[str, Any]) -> list[str]:
     found: list[str] = []
+    inline_tables = _inline_route_tables(plan)
     for address, rtype, after, unknown in _resources(plan):
         if rtype in FORBIDDEN_TYPES:
             found.append(f"{address}: {FORBIDDEN_TYPES[rtype]} is internet-facing")
@@ -227,8 +251,13 @@ def violations(plan: dict[str, Any]) -> list[str]:
             found.append(f"{address}: publicly_accessible must be false")
         elif rtype == "aws_route" and _default_route_via_gateway(after, unknown):
             found.append(f"{address}: default route to the internet")
-        elif rtype in ("aws_route_table", "aws_default_route_table"):
-            found.extend(_route_table_violations(address, after.get("route") or [], unknown.get("route")))
+        elif rtype in ROUTE_TABLE_TYPES:
+            routes_unknown = unknown.get("route")
+            if inline_tables is not None and re.sub(r"\[[^\]]*\]", "", address) not in inline_tables:
+                # No inline routes in config: `route` is only computed from separate aws_route resources,
+                # which are checked one by one, so an unknown value here is not a hidden route.
+                routes_unknown = None
+            found.extend(_route_table_violations(address, after.get("route") or [], routes_unknown))
         elif rtype in POLICY_TYPES and _allows_anyone(after.get("policy")):
             found.append(f"{address}: resource policy allows any principal")
         elif rtype in ("aws_s3_bucket_public_access_block", "aws_s3_account_public_access_block"):
