@@ -23,9 +23,6 @@ app/dist/
 
 # Tools
 .firecrawl/
-.claude-flow/
-.claude/proven-config*
-.claude/.proven-config*
 .DS_Store
 styles/
 

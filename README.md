@@ -58,6 +58,8 @@ reads Terraform.
 
 ## Architecture
 
+![Harbor stock API on Amazon ECS Fargate: delivery and runtime](docs/diagrams/architecture-animated.svg)
+
 ![System context: customers, engineers and operators around the Harbor stock API on Amazon ECS](docs/diagrams/01-context.svg)
 
 Customers call the API over HTTPS. Engineers change it through GitHub, and a GitHub Actions pipeline builds, scans
