@@ -1,6 +1,10 @@
 # Task execution role: what the ECS agent needs to start the task (pull the
 # image from ECR, write to CloudWatch Logs). It uses the AWS managed
 # AmazonECSTaskExecutionRolePolicy, maintained by AWS for exactly this role.
+# Its pull and log actions apply to every repository and log group in the
+# account. A scoped inline policy would narrow those to this service's
+# repository and log group, but it still has to grant
+# ecr:GetAuthorizationToken on "*" (the action has no resource-level scope).
 # The trust policy is scoped to this account's ECS tasks. There is no task
 # role, because the app calls no AWS APIs; add one with its own policy when it
 # does.
