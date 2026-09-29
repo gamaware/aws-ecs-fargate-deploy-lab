@@ -193,7 +193,8 @@ def _route_table_violations(address: str, routes: list[Any], routes_unknown: Any
 def _allows_anyone(policy: Any) -> bool:
     """True when a policy document has an Allow statement for any principal ("*") that no Condition key limits.
 
-    A wildcard counts under every principal key (AWS, Service, Federated, CanonicalUser), not only AWS.
+    A wildcard counts under every principal key (AWS, Service, Federated, CanonicalUser), not only AWS. An Allow with
+    NotPrincipal grants every principal except the ones listed, anonymous callers included, so it counts as well.
     """
     if not isinstance(policy, str) or not policy:
         return False
@@ -206,8 +207,10 @@ def _allows_anyone(policy: Any) -> bool:
         statements = [statements]
     for statement in statements:
         principal = statement.get("Principal")
-        anyone = principal == "*" or (
-            isinstance(principal, dict) and any("*" in _as_list(value) for value in principal.values())
+        anyone = (
+            "NotPrincipal" in statement
+            or principal == "*"
+            or (isinstance(principal, dict) and any("*" in _as_list(value) for value in principal.values()))
         )
         if statement.get("Effect") == "Allow" and anyone and not _limits_callers(statement.get("Condition")):
             return True
