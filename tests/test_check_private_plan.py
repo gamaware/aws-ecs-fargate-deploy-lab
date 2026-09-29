@@ -67,6 +67,7 @@ NOT_ACCOUNT_READ = allow_anyone({"StringNotEquals": {"aws:PrincipalAccount": "11
 ANONYMOUS_READ = allow_anyone({"StringEquals": {"aws:PrincipalAccount": "anonymous"}})
 ANONYMOUS_IN_LIST_READ = allow_anyone({"StringEquals": {"aws:PrincipalAccount": ["111122223333", "Anonymous"]}})
 WILDCARD_ACCOUNT_READ = allow_anyone({"StringLike": {"aws:PrincipalAccount": "*"}})
+VARIABLE_ACCOUNT_READ = allow_anyone({"StringEquals": {"aws:PrincipalAccount": "${aws:PrincipalAccount}"}})
 WILDCARD_ARN_READ = allow_anyone({"ArnLike": {"aws:PrincipalArn": "arn:aws:iam::?????????????:*"}})
 EMPTY_VALUES_READ = allow_anyone({"StringEquals": {"aws:PrincipalOrgID": []}})
 BARE_FOR_ALL_VALUES_READ = allow_anyone(
@@ -152,6 +153,7 @@ class InternetFacing(unittest.TestCase):
         "public policy for anonymous callers": ("aws_s3_bucket_policy", {"policy": ANONYMOUS_READ}, None),
         "public policy listing anonymous": ("aws_s3_bucket_policy", {"policy": ANONYMOUS_IN_LIST_READ}, None),
         "public policy with a wildcard account": ("aws_s3_bucket_policy", {"policy": WILDCARD_ACCOUNT_READ}, None),
+        "public policy with a policy variable": ("aws_s3_bucket_policy", {"policy": VARIABLE_ACCOUNT_READ}, None),
         "public policy with a wildcard ARN": ("aws_s3_bucket_policy", {"policy": WILDCARD_ARN_READ}, None),
         "public policy with no condition values": ("aws_s3_bucket_policy", {"policy": EMPTY_VALUES_READ}, None),
         "public policy with bare ForAllValues": ("aws_s3_bucket_policy", {"policy": BARE_FOR_ALL_VALUES_READ}, None),
@@ -160,6 +162,8 @@ class InternetFacing(unittest.TestCase):
             {"policy": FOR_ALL_VALUES_OPTIONAL_READ},
             None,
         ),
+        "ECS service without network configuration": ("aws_ecs_service", {}, None),
+        "ECS network configuration without assign_public_ip": ("aws_ecs_service", {"network_configuration": [{}]}, None),
         "ECS network unknown until apply": ("aws_ecs_service", {}, {"network_configuration": True}),
         "routes unknown until apply": ("aws_route_table", {}, {"route": True}),
         "route list unknown until apply": ("aws_route_table", {"route": []}, {"route": [{"gateway_id": True}]}),

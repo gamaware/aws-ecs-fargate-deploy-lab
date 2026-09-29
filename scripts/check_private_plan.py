@@ -150,10 +150,14 @@ def _is_false(value: Any) -> bool:
 
 
 def _concrete(value: Any) -> bool:
-    """A non-empty list of literal values, none a wildcard pattern and none "anonymous"."""
+    """A non-empty list of literal values: no wildcard pattern, no "anonymous" and no policy variable.
+
+    A policy variable such as ${aws:PrincipalAccount} resolves to the caller's own value, so it matches anyone.
+    """
     values = _as_list(value)
     return bool(values) and all(
-        isinstance(v, str) and v and "*" not in v and "?" not in v and v.lower() != "anonymous" for v in values
+        isinstance(v, str) and v and "*" not in v and "?" not in v and v.lower() != "anonymous" and "${" not in v
+        for v in values
     )
 
 
@@ -188,12 +192,11 @@ def violations(plan: dict[str, Any]) -> list[str]:
                 found.append(f"{address}: ingress from 0.0.0.0/0 or ::/0 on port {after.get('from_port')}")
         elif rtype == "aws_ecs_service":
             # Only an explicit false passes: an absent or unknown value could resolve to true at apply time.
-            nets_unknown = unknown.get("network_configuration")
-            for net in after.get("network_configuration") or []:
-                if net.get("assign_public_ip") is not False:
-                    found.append(f"{address}: ECS tasks must run with assign_public_ip = false")
-            if nets_unknown is True:
+            if unknown.get("network_configuration") is True:
                 found.append(f"{address}: ECS network configuration is unknown until apply")
+                continue
+            if any(net.get("assign_public_ip") is not False for net in after.get("network_configuration") or [{}]):
+                found.append(f"{address}: ECS tasks must run with assign_public_ip = false")
         elif rtype == "aws_subnet" and after.get("map_public_ip_on_launch"):
             found.append(f"{address}: subnet maps public IP addresses on launch")
         elif rtype == "aws_instance" and after.get("associate_public_ip_address"):
