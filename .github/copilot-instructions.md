@@ -10,3 +10,4 @@ When reviewing pull requests in this repository:
 - New Terraform behaviour needs an assertion in a `.tftest.hcl` file that runs against the mocked provider.
 - Only fictional names and AWS documentation example account IDs may appear; no real IDs, ARNs, IPs or emails.
 - Verify conventional commit format in PR titles.
+- Flag job-marketplace profile links, service offers and sales badges; none are allowed.
