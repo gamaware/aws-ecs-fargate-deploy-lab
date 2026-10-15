@@ -39,3 +39,5 @@ All notable changes to this project are documented here. The format follows
 ### Security
 
 - Shared reusable workflows from `gamaware/.github` are called pinned to a full commit SHA.
+- The Trivy gate failed on HIGH CVE-2026-84782 (OpenSSL, `libssl3t64`) in the runtime base image. The
+  `gcr.io/distroless/nodejs24-debian13:nonroot` digest now points at the rebuild that ships the patched package.
