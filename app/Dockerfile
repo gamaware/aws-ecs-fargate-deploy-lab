@@ -17,7 +17,7 @@ RUN npm test \
 # Stage 2: distroless Node.js runtime. No shell, no package manager, runs as
 # the nonroot user (65532). The app has no runtime dependencies, so there is
 # no node_modules to copy.
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:59c479c9b8c123e66047315c968aa2d35e31ae5149c856e4110a79c8b3563f0b
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:6abfcb367ebc291572c774c1592a986be2ab26a2486f73093401327495a5962a
 ARG APP_VERSION=dev
 ENV NODE_ENV=production \
     PORT=8080 \
